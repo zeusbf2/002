@@ -38,8 +38,6 @@ def calcular_distancia_acumulada(coords):
 
 def mostrar_home():
     st.markdown("<h1 style='font-size: 15px;'>📍 Visualizador de Rutas</h1>", unsafe_allow_html=True)
-    
-
 
     kmz_files = [f for f in os.listdir(carpeta_kmz) if f.endswith(".kmz")]
     rutas_disponibles = sorted(set(os.path.splitext(f)[0].split("_")[-1] for f in kmz_files))
@@ -59,9 +57,23 @@ def mostrar_home():
                 bounds = [[linea.bounds[1], linea.bounds[0]], [linea.bounds[3], linea.bounds[2]]]
 
                 m = folium.Map()
-                folium.TileLayer("OpenStreetMap").add_to(m)
+
+                # Capa base
+                folium.TileLayer("OpenStreetMap", name="Mapa Base").add_to(m)
+
+                # Capa satélite ESRI
+                folium.TileLayer(
+                    tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+                    attr="Esri",
+                    name="Satélite",
+                    overlay=False,
+                    control=True
+                ).add_to(m)
+
+                # Ajustar vista
                 m.fit_bounds(bounds)
 
+                # Agregar la línea (bordes negro + azul)
                 folium.GeoJson(
                     linea,
                     style_function=lambda x: {"color": "black", "weight": 8}
@@ -72,8 +84,13 @@ def mostrar_home():
                     style_function=lambda x: {"color": "#3388ff", "weight": 4}
                 ).add_to(m)
 
+                # Control de capas
+                folium.LayerControl().add_to(m)
+
+                # Mostrar el mapa
                 st_folium(m, use_container_width=True, height=400)
 
+                # Gráfico de elevación
                 elevaciones = [round(z, 2) for _, _, z in coords]
                 distancias = calcular_distancia_acumulada(coords)
 
