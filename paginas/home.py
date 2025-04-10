@@ -37,7 +37,7 @@ def calcular_distancia_acumulada(coords):
     return distancias
 
 def mostrar_home():
-    st.markdown("<h1 style='font-size: 15px;'>📍 Visualizador de Rutas</h1> **📈 Elevación:** mínima {elev_min} m, máxima {elev_max} m, unsafe_allow_html=True)
+    st.markdown("<h1 style='font-size: 15px;'>📍 Visualizador de Rutas</h1>, unsafe_allow_html=True)
     
 
 
