@@ -10,10 +10,12 @@ import folium
 from streamlit_folium import st_folium
 import math
 
-# === CONFIG ===
-archivo_excel = "INDICES CACC_IMN.xlsx"
-hoja = "Indices Reales Normalizados"
-carpeta_kmz = "tus_kmz"
+def mostrar_isv():  # 👈 Encabezado de función agregado
+
+    # === CONFIG ===
+    archivo_excel = "INDICES CACC_IMN.xlsx"
+    hoja = "Indices Reales Normalizados"
+    carpeta_kmz = "tus_kmz"
 
 # === FUNCIONES ===
 
