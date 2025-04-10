@@ -164,17 +164,17 @@ if ruta_seleccionada:
 
                 col1, col2 = st.columns([1, 4])
                with col1:
-    st.markdown("### 🗺️ Leyenda")
-    st.markdown("""
-    <div style='line-height: 2'>
-    <span style='background-color:#00FF00;padding:5px 10px;margin-right:5px;'></span> CAT 1 - Muy baja (0–1)<br>
-    <span style='background-color:#FFFF00;padding:5px 10px;margin-right:5px;'></span> CAT 2 - Baja (1–2)<br>
-    <span style='background-color:#FFA500;padding:5px 10px;margin-right:5px;'></span> CAT 3 - Media (2–3)<br>
-    <span style='background-color:#FF0000;padding:5px 10px;margin-right:5px;'></span> CAT 4 - Alta (3–4)<br>
-    <span style='background-color:#808080;padding:5px 10px;margin-right:5px;'></span> CAT 5 - Muy alta (4–5)<br>
-    <span style='background-color:#FFFFFF;padding:5px 10px;margin-right:5px;border:1px solid #ccc;'></span> Sin datos
-    </div>
-    """, unsafe_allow_html=True)
+                    st.markdown("### 🗺️ Leyenda")
+                    st.markdown("""
+                    <div style='line-height: 2'>
+                    <span style='background-color:#00FF00;padding:5px 10px;margin-right:5px;'></span> CAT 1 - Muy baja (0–1)<br>
+                    <span style='background-color:#FFFF00;padding:5px 10px;margin-right:5px;'></span> CAT 2 - Baja (1–2)<br>
+                    <span style='background-color:#FFA500;padding:5px 10px;margin-right:5px;'></span> CAT 3 - Media (2–3)<br>
+                    <span style='background-color:#FF0000;padding:5px 10px;margin-right:5px;'></span> CAT 4 - Alta (3–4)<br>
+                    <span style='background-color:#808080;padding:5px 10px;margin-right:5px;'></span> CAT 5 - Muy alta (4–5)<br>
+                    <span style='background-color:#FFFFFF;padding:5px 10px;margin-right:5px;border:1px solid #ccc;'></span> Sin datos
+                    </div>
+                    """, unsafe_allow_html=True)
 
                 with col2:
                     st_folium(m, use_container_width=True, height=600)
