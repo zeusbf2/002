@@ -6,3 +6,4 @@ shapely
 folium
 geopy
 streamlit-folium
+plotly
