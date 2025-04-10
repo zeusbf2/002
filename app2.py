@@ -89,7 +89,7 @@ def calcular_perpendicular(p1, p2, length=0.00015):
 # === APP ===
 
 st.set_page_config(layout="wide")
-st.title("🗺️ Mapa de Calor por Ruta + Marcas cada 1 km")
+st.title("🗺️ ISV Mejorado")
 
 kmz_files = [f for f in os.listdir(carpeta_kmz) if f.endswith(".kmz")]
 rutas_disponibles = sorted(set(os.path.splitext(f)[0].split("_")[-1] for f in kmz_files))
