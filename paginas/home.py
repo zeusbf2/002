@@ -39,9 +39,6 @@ def calcular_distancia_acumulada(coords):
 def mostrar_home():
     st.markdown("""
         <style>
-            .main-container {
-                padding: 0;
-            }
             .map-container {
                 height: 70vh;
                 margin-bottom: 0.5rem;
@@ -84,12 +81,12 @@ def mostrar_home():
 
                 mapa_html = m.get_root().render().replace('"', '&quot;')
 
-                # Mapa con menos separación debajo
+                # Mapa con altura ajustada y sin espacio sobrante
                 html(f"""
                     <div class="map-container">
                         <iframe srcdoc="{mapa_html}" width="100%" height="100%"></iframe>
                     </div>
-                """, height=500)
+                """, height=0)
 
                 elevaciones = [round(z, 2) for _, _, z in coords]
                 distancias = calcular_distancia_acumulada(coords)
