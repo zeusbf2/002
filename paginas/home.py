@@ -7,47 +7,7 @@ import plotly.graph_objects as go
 from shapely.geometry import LineString
 from geopy.distance import geodesic
 from xml.etree import ElementTree as ET
-
-
-
-carpeta_kmz = "tus_kmz"
-
-def extraer_coords_desde_kmz(kmz_path):
-    with zipfile.ZipFile(kmz_path, 'r') as z:
-        kml_file = next(f for f in z.namelist() if f.endswith('.kml'))
-        with z.open(kml_file) as kml:
-            tree = ET.parse(kml)
-            root = tree.getroot()
-
-            ns = {'kml': 'http://www.opengis.net/kml/2.2'}
-            coord_text = root.find('.//kml:coordinates', ns).text.strip()
-            coords = []
-            for line in coord_text.split():
-                partes = line.strip().split(",")
-                if len(partes) == 3:
-                    lon, lat, ele = map(float, partes)
-                    coords.append((lon, lat, ele))
-            return coords
-
-def calcular_distancia_acumulada(coords):
-    distancias = [0.0]
-    for i in range(1, len(coords)):
-        p1 = (coords[i-1][1], coords[i-1][0])  # lat, lon
-        p2 = (coords[i][1], coords[i][0])
-        d = geodesic(p1, p2).meters
-        distancias.append(distancias[-1] + d)
-    return distancias
-
-from shapely.geometry import LineString
-from geopy.distance import geodesic
-import streamlit as st
-from streamlit_folium import st_folium
-import plotly.graph_objects as go
-import zipfile
-import os
-from xml.etree import ElementTree as ET
 from streamlit.components.v1 import html
-import folium
 
 carpeta_kmz = "tus_kmz"
 
@@ -77,29 +37,6 @@ def calcular_distancia_acumulada(coords):
     return distancias
 
 def mostrar_home():
-    st.markdown("""
-        <style>
-            .fullscreen-container {
-                display: flex;
-                flex-direction: column;
-                height: 100vh;
-                gap: 0.5rem;
-            }
-            .mapa {
-                flex: 1;
-            }
-            .grafico {
-                height: 25vh;
-                overflow: hidden;
-            }
-            iframe {
-                width: 100%;
-                height: 100%;
-                border: none;
-            }
-        </style>
-    """, unsafe_allow_html=True)
-
     st.markdown("<h1 style='font-size: 25px;'>📍 Visualizador de Rutas</h1>", unsafe_allow_html=True)
     st.markdown("<p style='font-size: 15px;'>Aquí puedes explorar los trazados de rutas disponibles sin mapa de calor.</p>", unsafe_allow_html=True)
 
@@ -120,17 +57,27 @@ def mostrar_home():
                 linea = LineString([(lon, lat) for lon, lat, _ in coords])
                 bounds = [[linea.bounds[1], linea.bounds[0]], [linea.bounds[3], linea.bounds[2]]]
 
-                # Crear mapa folium
                 m = folium.Map(tiles="OpenStreetMap")
                 m.fit_bounds(bounds)
                 folium.GeoJson(linea, style_function=lambda x: {"color": "black", "weight": 8}).add_to(m)
                 folium.GeoJson(linea, style_function=lambda x: {"color": "#3388ff", "weight": 4}).add_to(m)
+
+                mapa_html = m.get_root().render().replace('"', '&quot;')
+
+                # Mostrar el mapa en un contenedor de altura 75% de la pantalla
+                html(f"""
+                    <div style="height:75vh;">
+                        <iframe srcdoc="{mapa_html}" width="100%" height="100%" style="border:none;"></iframe>
+                    </div>
+                """, height=650)
 
                 elevaciones = [round(z, 2) for _, _, z in coords]
                 distancias = calcular_distancia_acumulada(coords)
 
                 elev_min = round(min(elevaciones), 2)
                 elev_max = round(max(elevaciones), 2)
+
+                st.markdown(f"**📈 Elevación:** mínima {elev_min} m, máxima {elev_max} m")
 
                 fig = go.Figure()
                 fig.add_trace(go.Scatter(
@@ -141,28 +88,17 @@ def mostrar_home():
                     fill="tozeroy",
                     name="Altura (m)"
                 ))
+
                 fig.update_layout(
                     margin=dict(l=10, r=10, t=30, b=10),
                     xaxis_title="Distancia (m)",
                     yaxis_title="Elevación (m)",
                     template="plotly_white",
-                    height=200,
+                    height=300,
                     showlegend=False
                 )
 
-                mapa_html = m.get_root().render().replace('"', '&quot;')
-
-                st.markdown(f"""
-                    <div class="fullscreen-container">
-                        <div class="mapa">
-                            <iframe srcdoc="{mapa_html}"></iframe>
-                        </div>
-                        <div class="grafico">
-                            <p style="margin: 0 0 0 10px;"><b>📈 Elevación:</b> mínima {elev_min} m, máxima {elev_max} m</p>
-                            <div>{st.plotly_chart(fig, use_container_width=True)}</div>
-                        </div>
-                    </div>
-                """, unsafe_allow_html=True)
+                st.plotly_chart(fig, use_container_width=True)
 
             except Exception as e:
                 st.error(f"Error al procesar el archivo KMZ: {e}")
