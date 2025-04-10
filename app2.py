@@ -45,8 +45,7 @@ def valor_a_color(valor):
     try:
         v = float(valor)
     except:
-        return "#FFFFFF"  # Blanco si es "sin datos"
-
+        return "#FFFFFF"  # Blanco para sin datos
     if v <= 1.00:
         return "#00FF00"  # Verde
     elif v <= 2.00:
@@ -58,8 +57,7 @@ def valor_a_color(valor):
     elif v <= 5.00:
         return "#808080"  # Gris
     else:
-        return "#FFFFFF"  # Blanco por seguridad
-
+        return "#FFFFFF"
 
 def dividir_linea_por_km(linea):
     coords = list(linea.coords)
@@ -98,7 +96,7 @@ def calcular_perpendicular(p1, p2, length=0.00015):
 # === APP ===
 
 st.set_page_config(layout="wide")
-st.title("🗺️ ISV Mejorado")
+st.title("🗺️ Mapa de Calor por Ruta + Marcas cada 1 km")
 
 kmz_files = [f for f in os.listdir(carpeta_kmz) if f.endswith(".kmz")]
 rutas_disponibles = sorted(set(os.path.splitext(f)[0].split("_")[-1] for f in kmz_files))
@@ -117,12 +115,10 @@ if ruta_seleccionada:
                 segmentos = dividir_linea_por_km(linea)
 
                 if len(valores) < len(segmentos):
-                    st.warning(f"⚠️ La ruta tiene {len(segmentos)} tramos de 1 km, pero el Excel solo tiene {len(valores)} valores. El resto será gris.")
+                    st.warning(f"⚠️ La ruta tiene {len(segmentos)} tramos de 1 km, pero el Excel solo tiene {len(valores)} valores. El resto será blanco (sin datos).")
 
                 bounds = [[linea.bounds[1], linea.bounds[0]], [linea.bounds[3], linea.bounds[2]]]
                 m = folium.Map()
-
-                # Capa satélite y mapa base
                 folium.TileLayer(
                     tiles="https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
                     attr="Google Satellite",
@@ -131,11 +127,10 @@ if ruta_seleccionada:
                     subdomains=["mt0", "mt1", "mt2", "mt3"]
                 ).add_to(m)
                 folium.TileLayer("OpenStreetMap", name="Mapa base").add_to(m)
-
                 m.fit_bounds(bounds)
 
                 for i, seg in enumerate(segmentos):
-                    color = valor_a_color(valores[i]) if i < len(valores) and valores[i] is not None else "#808080"
+                    color = valor_a_color(valores[i]) if i < len(valores) else "#FFFFFF"
                     folium.GeoJson(
                         mapping(seg),
                         style_function=(lambda col=color: lambda x: {"color": col, "weight": 5})(color)
@@ -153,32 +148,30 @@ if ruta_seleccionada:
                         dx = coords[1][0] - coords[0][0]
                         dy = coords[1][1] - coords[0][1]
                         label_x = coords[0][0] + dx * 0.03
-                        label_y = coords[0][1] + dy * 0.03 - 0.0010 # subida vertical
+                        label_y = coords[0][1] + dy * 0.03 + 0.0002
 
                         folium.Marker(
                             location=[label_y, label_x],
-                            icon=folium.DivIcon(html=f"<div style='font-size: 20pt; color: black;'> {i+1}</div>")
+                            icon=folium.DivIcon(html=f"<div style='font-size: 10pt; color: black;'>Km {i+1}</div>")
                         ).add_to(m)
 
                 folium.LayerControl().add_to(m)
 
                 col1, col2 = st.columns([1, 4])
-               with col1:
+                with col1:
                     st.markdown("### 🗺️ Leyenda")
                     st.markdown("""
                     <div style='line-height: 2'>
-                    <span style='background-color:#00FF00;padding:5px 10px;margin-right:5px;'></span> CAT 1 - Muy baja (0–1)<br>
-                    <span style='background-color:#FFFF00;padding:5px 10px;margin-right:5px;'></span> CAT 2 - Baja (1–2)<br>
-                    <span style='background-color:#FFA500;padding:5px 10px;margin-right:5px;'></span> CAT 3 - Media (2–3)<br>
-                    <span style='background-color:#FF0000;padding:5px 10px;margin-right:5px;'></span> CAT 4 - Alta (3–4)<br>
-                    <span style='background-color:#808080;padding:5px 10px;margin-right:5px;'></span> CAT 5 - Muy alta (4–5)<br>
+                    <span style='background-color:#00FF00;padding:5px 10px;margin-right:5px;'></span> CAT 1 - Muy baja (≤ 1.00)<br>
+                    <span style='background-color:#FFFF00;padding:5px 10px;margin-right:5px;'></span> CAT 2 - Baja (≤ 2.00)<br>
+                    <span style='background-color:#FFA500;padding:5px 10px;margin-right:5px;'></span> CAT 3 - Media (≤ 3.00)<br>
+                    <span style='background-color:#FF0000;padding:5px 10px;margin-right:5px;'></span> CAT 4 - Alta (≤ 4.00)<br>
+                    <span style='background-color:#808080;padding:5px 10px;margin-right:5px;'></span> CAT 5 - Muy alta (≤ 5.00)<br>
                     <span style='background-color:#FFFFFF;padding:5px 10px;margin-right:5px;border:1px solid #ccc;'></span> Sin datos
                     </div>
                     """, unsafe_allow_html=True)
-
                 with col2:
-                    st_folium(m, use_container_width=True, height=600)
-
+                    st_folium(m, use_container_width=True, height=650)
 
             except Exception as e:
                 st.error(f"Error al procesar la ruta: {e}")
