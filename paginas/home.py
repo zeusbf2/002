@@ -79,7 +79,7 @@ def mostrar_home():
 
                 elev_min = round(min(elevaciones), 2)
                 elev_max = round(max(elevaciones), 2)
-
+                st.markdown(f"**📈 Elevación:** mínima {elev_min} m, máxima {elev_max} m")
                 
 
                 fig = go.Figure()
