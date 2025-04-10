@@ -159,27 +159,34 @@ if ruta_seleccionada:
                         label_x = coords[0][0] + dx * 0.03
                         label_y = coords[0][1] + dy * 0.03 - 0.0020
 
-                        folium.Marker(
+                        # Color dinámico para el fondo del número según el valor
+color_fondo = valor_a_color(valores[i]) if i < len(valores) else "#FFFFFF"
+
+# HTML estilo moderno tipo SVG visual
+icon_html = f"""
+<div style="
+    background-color: {color_fondo};
+    color: black;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 13px;
+    border: 2px solid #00000088;
+    box-shadow: 1px 1px 6px rgba(0,0,0,0.5);
+">
+    {i+1}
+</div>
+"""
+
+folium.Marker(
     location=[label_y, label_x],
-    icon=folium.DivIcon(html=f"""
-        <div style="
-            background-color: white;
-            color: black;
-            border-radius: 50%;
-            width: 28px;
-            height: 28px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 12px;
-            box-shadow: 1px 1px 5px rgba(0,0,0,0.4);
-            border: 2px solid #333;
-        ">
-            {i+1}
-        </div>
-    """)
+    icon=folium.DivIcon(html=icon_html)
 ).add_to(m)
+
 
 
 
