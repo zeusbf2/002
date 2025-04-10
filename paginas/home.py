@@ -72,7 +72,7 @@ def mostrar_home():
                     style_function=lambda x: {"color": "#3388ff", "weight": 4}
                 ).add_to(m)
 
-                st_folium(m, use_container_width=True, height=600)
+                st_folium(m, use_container_width=True, height=400)
 
                 elevaciones = [round(z, 2) for _, _, z in coords]
                 distancias = calcular_distancia_acumulada(coords)
