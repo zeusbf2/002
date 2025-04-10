@@ -8,7 +8,7 @@ from shapely.geometry import LineString
 from geopy.distance import geodesic
 from xml.etree import ElementTree as ET
 
-st.set_page_config(page_title="Visualizador de Rutas", layout="wide")
+
 
 carpeta_kmz = "tus_kmz"
 
