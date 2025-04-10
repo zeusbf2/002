@@ -37,8 +37,8 @@ def calcular_distancia_acumulada(coords):
     return distancias
 
 def mostrar_home():
-    st.markdown("<h1 style='font-size: 36px;'>📍 Visualizador de Rutas</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='font-size: 18px;'>Aquí puedes explorar los trazados de rutas disponibles sin mapa de calor.</p>", unsafe_allow_html=True)
+    st.markdown("<h1 style='font-size: 25px;'>📍 Visualizador de Rutas</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size: 15px;'>Aquí puedes explorar los trazados de rutas disponibles sin mapa de calor.</p>", unsafe_allow_html=True)
 
 
     kmz_files = [f for f in os.listdir(carpeta_kmz) if f.endswith(".kmz")]
