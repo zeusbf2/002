@@ -135,7 +135,7 @@ if ruta_seleccionada:
                     # Borde debajo
                     folium.GeoJson(
                         mapping(seg),
-                        style_function=(lambda x: {"color": "black", "weight": 7})
+                        style_function=(lambda x: {"color": "black", "weight": 9})
                     ).add_to(m)
 
                     # Ruta coloreada encima
