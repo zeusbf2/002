@@ -152,7 +152,7 @@ if ruta_seleccionada:
 
                         folium.Marker(
                             location=[label_y, label_x],
-                            icon=folium.DivIcon(html=f"<div style='font-size: 20pt; color: black;'> {i+1}</div>")
+                            icon=folium.DivIcon(html=f"<div style='font-size: 15pt; color: black;'> {i+1}</div>")
                         ).add_to(m)
 
                 folium.LayerControl().add_to(m)
