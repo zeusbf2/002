@@ -132,10 +132,18 @@ if ruta_seleccionada:
 
                 for i, seg in enumerate(segmentos):
                     color = valor_a_color(valores[i]) if i < len(valores) else "#FFFFFF"
+                    # Borde debajo
+                    folium.GeoJson(
+                        mapping(seg),
+                        style_function=(lambda x: {"color": "black", "weight": 7})
+                    ).add_to(m)
+
+                    # Ruta coloreada encima
                     folium.GeoJson(
                         mapping(seg),
                         style_function=(lambda col=color: lambda x: {"color": col, "weight": 5})(color)
                     ).add_to(m)
+
 
                     coords = list(seg.coords)
                     if len(coords) >= 2:
