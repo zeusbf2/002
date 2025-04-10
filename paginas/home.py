@@ -77,6 +77,29 @@ def calcular_distancia_acumulada(coords):
     return distancias
 
 def mostrar_home():
+    st.markdown("""
+        <style>
+            .fullscreen-container {
+                display: flex;
+                flex-direction: column;
+                height: 100vh;
+                gap: 0.5rem;
+            }
+            .mapa {
+                flex: 1;
+            }
+            .grafico {
+                height: 25vh;
+                overflow: hidden;
+            }
+            iframe {
+                width: 100%;
+                height: 100%;
+                border: none;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
     st.markdown("<h1 style='font-size: 25px;'>📍 Visualizador de Rutas</h1>", unsafe_allow_html=True)
     st.markdown("<p style='font-size: 15px;'>Aquí puedes explorar los trazados de rutas disponibles sin mapa de calor.</p>", unsafe_allow_html=True)
 
@@ -103,21 +126,11 @@ def mostrar_home():
                 folium.GeoJson(linea, style_function=lambda x: {"color": "black", "weight": 8}).add_to(m)
                 folium.GeoJson(linea, style_function=lambda x: {"color": "#3388ff", "weight": 4}).add_to(m)
 
-                # Mostrar mapa con altura dinámica (viewport height)
-                html(f"""
-                    <div style="height:80vh;">
-                        <iframe srcdoc="{m.get_root().render().replace('"', '&quot;')}"
-                                width="100%" height="100%" style="border:none;"></iframe>
-                    </div>
-                """, height=700)
-
                 elevaciones = [round(z, 2) for _, _, z in coords]
                 distancias = calcular_distancia_acumulada(coords)
 
                 elev_min = round(min(elevaciones), 2)
                 elev_max = round(max(elevaciones), 2)
-
-                st.markdown(f"**📈 Elevación:** mínima {elev_min} m, máxima {elev_max} m")
 
                 fig = go.Figure()
                 fig.add_trace(go.Scatter(
@@ -128,17 +141,28 @@ def mostrar_home():
                     fill="tozeroy",
                     name="Altura (m)"
                 ))
-
                 fig.update_layout(
-                    margin=dict(l=10, r=10, t=30, b=20),
+                    margin=dict(l=10, r=10, t=30, b=10),
                     xaxis_title="Distancia (m)",
                     yaxis_title="Elevación (m)",
                     template="plotly_white",
-                    height=300,
+                    height=200,
                     showlegend=False
                 )
 
-                st.plotly_chart(fig, use_container_width=True)
+                mapa_html = m.get_root().render().replace('"', '&quot;')
+
+                st.markdown(f"""
+                    <div class="fullscreen-container">
+                        <div class="mapa">
+                            <iframe srcdoc="{mapa_html}"></iframe>
+                        </div>
+                        <div class="grafico">
+                            <p style="margin: 0 0 0 10px;"><b>📈 Elevación:</b> mínima {elev_min} m, máxima {elev_max} m</p>
+                            <div>{st.plotly_chart(fig, use_container_width=True)}</div>
+                        </div>
+                    </div>
+                """, unsafe_allow_html=True)
 
             except Exception as e:
                 st.error(f"Error al procesar el archivo KMZ: {e}")
