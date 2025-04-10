@@ -43,14 +43,23 @@ def cargar_linea_desde_kmz(kmz_path):
 
 def valor_a_color(valor):
     try:
-        v = int(float(valor))
+        v = float(valor)
     except:
-        return "#808080"
-    colores = {
-        0: "#0000FF", 1: "#00FFFF", 2: "#00FF00",
-        3: "#FFFF00", 4: "#FFA500", 5: "#FF0000"
-    }
-    return colores.get(v, "#808080")
+        return "#FFFFFF"  # Blanco si es "sin datos"
+
+    if v <= 1.00:
+        return "#00FF00"  # Verde
+    elif v <= 2.00:
+        return "#FFFF00"  # Amarillo
+    elif v <= 3.00:
+        return "#FFA500"  # Naranja
+    elif v <= 4.00:
+        return "#FF0000"  # Rojo
+    elif v <= 5.00:
+        return "#808080"  # Gris
+    else:
+        return "#FFFFFF"  # Blanco por seguridad
+
 
 def dividir_linea_por_km(linea):
     coords = list(linea.coords)
