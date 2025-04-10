@@ -58,10 +58,10 @@ def mostrar_home():
 
                 m = folium.Map()
 
-                # Capa base
+                # Capa base OSM
                 folium.TileLayer("OpenStreetMap", name="Mapa Base").add_to(m)
 
-                # Capa satélite ESRI
+                # Capa satelital ESRI
                 folium.TileLayer(
                     tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
                     attr="Esri",
@@ -70,10 +70,19 @@ def mostrar_home():
                     control=True
                 ).add_to(m)
 
-                # Ajustar vista
+                # Capa de etiquetas (nombres de ciudades, límites)
+                folium.TileLayer(
+                    tiles="https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+                    attr="Esri",
+                    name="Etiquetas",
+                    overlay=True,
+                    control=True
+                ).add_to(m)
+
+                # Ajustar vista del mapa
                 m.fit_bounds(bounds)
 
-                # Agregar la línea (bordes negro + azul)
+                # Línea doble (borde negro + azul)
                 folium.GeoJson(
                     linea,
                     style_function=lambda x: {"color": "black", "weight": 8}
@@ -87,10 +96,10 @@ def mostrar_home():
                 # Control de capas
                 folium.LayerControl().add_to(m)
 
-                # Mostrar el mapa
+                # Mostrar mapa
                 st_folium(m, use_container_width=True, height=400)
 
-                # Gráfico de elevación
+                # Elevaciones y gráfico
                 elevaciones = [round(z, 2) for _, _, z in coords]
                 distancias = calcular_distancia_acumulada(coords)
 
