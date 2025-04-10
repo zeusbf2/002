@@ -168,7 +168,7 @@ if ruta_seleccionada:
                     </div>
                     """, unsafe_allow_html=True)
                 with col2:
-                    st_folium(m, use_container_width=True, height=800)
+                    st_folium(m, use_container_width=True, height=600)
 
 
             except Exception as e:
