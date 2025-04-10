@@ -160,15 +160,8 @@ if ruta_seleccionada:
                         label_y = coords[0][1] + dy * 0.03 - 0.0020
 
                         # Color dinámico para el fondo del número según el valor
-try:
-    # algo
-except:
-    pass  # o maneja el error correctamente
-
 color_fondo = valor_a_color(valores[i]) if i < len(valores) else "#FFFFFF"
 
-
-# HTML estilo moderno tipo SVG visual
 icon_html = f"""
 <div style="
     background-color: {color_fondo};
