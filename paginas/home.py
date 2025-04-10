@@ -5,7 +5,8 @@ import geopandas as gpd
 import io
 import folium
 from streamlit_folium import st_folium
-import plotly.express as px
+import plotly.graph_objects as go
+from shapely.geometry import LineString
 from geopy.distance import geodesic
 
 carpeta_kmz = "tus_kmz"
@@ -16,6 +17,15 @@ def cargar_linea_desde_kmz(kmz_path):
         with z.open(kml_file) as kml:
             gdf = gpd.read_file(io.BytesIO(kml.read()))
     return gdf.geometry.iloc[0], gdf
+
+def calcular_distancia_acumulada(coords):
+    distancias = [0.0]
+    for i in range(1, len(coords)):
+        p1 = (coords[i-1][1], coords[i-1][0])  # lat, lon
+        p2 = (coords[i][1], coords[i][0])
+        d = geodesic(p1, p2).meters
+        distancias.append(distancias[-1] + d)
+    return distancias
 
 def mostrar_home():
     st.title("📍 Visualizador de Rutas")
@@ -36,13 +46,13 @@ def mostrar_home():
                 folium.TileLayer("OpenStreetMap").add_to(m)
                 m.fit_bounds(bounds)
 
-                # Borde negro grueso
+                # Borde negro
                 folium.GeoJson(
                     linea,
                     style_function=lambda x: {"color": "black", "weight": 8}
                 ).add_to(m)
 
-                # Línea principal
+                # Línea azul encima
                 folium.GeoJson(
                     linea,
                     style_function=lambda x: {"color": "#3388ff", "weight": 4}
@@ -50,39 +60,43 @@ def mostrar_home():
 
                 st_folium(m, use_container_width=True, height=600)
 
-                # Mostrar gráfico de elevación si hay Z
-                if linea.has_z:
-                    coords = list(linea.coords)
-                    elevaciones = []
-                    distancias = []
-                    dist_acum = 0.0
+                # Elevación (si hay)
+                if gdf.geometry.iloc[0].has_z:
+                    coords = [c for c in gdf.geometry.iloc[0].coords if len(c) > 2]
+                    if coords:
+                        elevaciones = [round(c[2], 2) for c in coords]
+                        distancias = calcular_distancia_acumulada(coords)
 
-                    for i in range(len(coords)):
-                        if len(coords[i]) < 3:
-                            continue
-                        z = coords[i][2]
-                        if i == 0:
-                            distancias.append(0)
-                        else:
-                            prev = (coords[i-1][1], coords[i-1][0])
-                            curr = (coords[i][1], coords[i][0])
-                            dist_acum += geodesic(prev, curr).meters
-                            distancias.append(round(dist_acum, 2))
-                        elevaciones.append(z)
+                        elev_min = round(min(elevaciones), 2)
+                        elev_max = round(max(elevaciones), 2)
 
-                    df = {"Distancia (m)": distancias, "Altura (m)": elevaciones}
-                    fig = px.line(df, x="Distancia (m)", y="Altura (m)",
-                                  title="📈 Perfil de Elevación",
-                                  markers=True,
-                                  height=400)
-                    fig.update_layout(margin=dict(l=30, r=30, t=40, b=30),
-                                      template="plotly_white",
-                                      xaxis_title="Distancia acumulada (m)",
-                                      yaxis_title="Altura (m)")
-                    st.plotly_chart(fig, use_container_width=True)
+                        st.markdown(f"**📈 Elevación:** mínima {elev_min} m, máxima {elev_max} m")
 
+                        fig = go.Figure()
+                        fig.add_trace(go.Scatter(
+                            x=distancias,
+                            y=elevaciones,
+                            mode="lines",
+                            line=dict(color="mediumslateblue", width=3),
+                            fill="tozeroy",
+                            name="Altura (m)"
+                        ))
+
+                        fig.update_layout(
+                            margin=dict(l=20, r=20, t=30, b=20),
+                            xaxis_title="Distancia (m)",
+                            yaxis_title="Elevación (m)",
+                            template="plotly_white",
+                            height=300,
+                            showlegend=False
+                        )
+
+                        st.plotly_chart(fig, use_container_width=True)
+
+                    else:
+                        st.info("No se encontraron valores de elevación.")
                 else:
-                    st.info("La geometría no tiene valores de elevación (Z).")
+                    st.info("La geometría no contiene datos de altitud (Z).")
 
             except Exception as e:
                 st.error(f"Error al cargar la ruta: {e}")
