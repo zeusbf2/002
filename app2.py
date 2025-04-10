@@ -148,7 +148,7 @@ if ruta_seleccionada:
                         dx = coords[1][0] - coords[0][0]
                         dy = coords[1][1] - coords[0][1]
                         label_x = coords[0][0] + dx * 0.03
-                        label_y = coords[0][1] + dy * 0.03 + 0.0020
+                        label_y = coords[0][1] + dy * 0.03 - 0.0020
 
                         folium.Marker(
                             location=[label_y, label_x],
