@@ -97,7 +97,7 @@ def mostrar_home():
                     xaxis_title="Distancia (m)",
                     yaxis_title="Elevación (m)",
                     template="plotly_white",
-                    height=300,
+                    height=200,
                     showlegend=False
                 )
 
