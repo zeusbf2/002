@@ -160,17 +160,27 @@ if ruta_seleccionada:
                         label_y = coords[0][1] + dy * 0.03 - 0.0020
 
                         folium.Marker(
-                            location=[label_y, label_x],
-                            icon=folium.DivIcon(html=f"""
-                                <div style='
-                                    font-size: 10pt;
-                                    color: black;
-                                    font-weight: bold;
-                                    text-shadow: -1px -1px 0 white, 1px -1px 0 white,
-                                                 -1px 1px 0 white, 1px 1px 0 white;
-                                '> {i+1}</div>
-                            """)
-                        ).add_to(m)
+    location=[label_y, label_x],
+    icon=folium.DivIcon(html=f"""
+        <div style="
+            background-color: white;
+            color: black;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+            box-shadow: 1px 1px 5px rgba(0,0,0,0.4);
+            border: 2px solid #333;
+        ">
+            {i+1}
+        </div>
+    """)
+).add_to(m)
+
 
 
                 folium.LayerControl().add_to(m)
