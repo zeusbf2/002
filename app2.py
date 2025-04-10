@@ -96,7 +96,7 @@ def calcular_perpendicular(p1, p2, length=0.00015):
 # === APP ===
 
 st.set_page_config(layout="wide")
-st.title("🗺️ Mapa de Calor por Ruta + Marcas cada 1 km")
+st.title("🗺️ Mapa ISV Mejorado")
 
 kmz_files = [f for f in os.listdir(carpeta_kmz) if f.endswith(".kmz")]
 rutas_disponibles = sorted(set(os.path.splitext(f)[0].split("_")[-1] for f in kmz_files))
@@ -148,11 +148,11 @@ if ruta_seleccionada:
                         dx = coords[1][0] - coords[0][0]
                         dy = coords[1][1] - coords[0][1]
                         label_x = coords[0][0] + dx * 0.03
-                        label_y = coords[0][1] + dy * 0.03 + 0.0002
+                        label_y = coords[0][1] + dy * 0.03 + 0.0020
 
                         folium.Marker(
                             location=[label_y, label_x],
-                            icon=folium.DivIcon(html=f"<div style='font-size: 10pt; color: black;'>Km {i+1}</div>")
+                            icon=folium.DivIcon(html=f"<div style='font-size: 20pt; color: black;'> {i+1}</div>")
                         ).add_to(m)
 
                 folium.LayerControl().add_to(m)
