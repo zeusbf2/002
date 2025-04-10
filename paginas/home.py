@@ -37,7 +37,7 @@ def calcular_distancia_acumulada(coords):
     return distancias
 
 def mostrar_home():
-    st.markdown("<h1 style='font-size: 15px;'>📍 Visualizador de Rutas</h1>, unsafe_allow_html=True)
+    st.markdown("<h1 style='font-size: 15px;'>📍 Visualizador de Rutas</h1>", unsafe_allow_html=True)
     
 
 
@@ -72,15 +72,15 @@ def mostrar_home():
                     style_function=lambda x: {"color": "#3388ff", "weight": 4}
                 ).add_to(m)
 
-                st_folium(m, use_container_width=True, height=500)
+                st_folium(m, use_container_width=True, height=600)
 
                 elevaciones = [round(z, 2) for _, _, z in coords]
                 distancias = calcular_distancia_acumulada(coords)
 
                 elev_min = round(min(elevaciones), 2)
                 elev_max = round(max(elevaciones), 2)
+
                 st.markdown(f"**📈 Elevación:** mínima {elev_min} m, máxima {elev_max} m")
-                
 
                 fig = go.Figure()
                 fig.add_trace(go.Scatter(
@@ -97,7 +97,7 @@ def mostrar_home():
                     xaxis_title="Distancia (m)",
                     yaxis_title="Elevación (m)",
                     template="plotly_white",
-                    height=250,
+                    height=300,
                     showlegend=False
                 )
 
