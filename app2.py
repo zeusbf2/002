@@ -112,6 +112,7 @@ if ruta_seleccionada:
             ruta = os.path.join(carpeta_kmz, kmz_filename)
             try:
                 linea = cargar_linea_desde_kmz(ruta)
+                linea = linea.simplify(0.00005, preserve_topology=True)
                 segmentos = dividir_linea_por_km(linea)
 
                 if len(valores) < len(segmentos):
