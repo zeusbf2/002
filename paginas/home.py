@@ -2,12 +2,11 @@ import streamlit as st
 import os
 import zipfile
 import folium
+from streamlit_folium import st_folium
 import plotly.graph_objects as go
 from shapely.geometry import LineString
 from geopy.distance import geodesic
 from xml.etree import ElementTree as ET
-from streamlit.components.v1 import html
-import uuid
 
 carpeta_kmz = "tus_kmz"
 
@@ -17,6 +16,7 @@ def extraer_coords_desde_kmz(kmz_path):
         with z.open(kml_file) as kml:
             tree = ET.parse(kml)
             root = tree.getroot()
+
             ns = {'kml': 'http://www.opengis.net/kml/2.2'}
             coord_text = root.find('.//kml:coordinates', ns).text.strip()
             coords = []
@@ -37,25 +37,9 @@ def calcular_distancia_acumulada(coords):
     return distancias
 
 def mostrar_home():
-    st.markdown("""
-        <style>
-            .map-container {
-                height: 70vh;
-                margin-bottom: 0.5rem;
-            }
-            iframe {
-                border: none;
-            }
-            .info-text {
-                margin: 0;
-                padding: 0 0 0.2rem 0.5rem;
-                font-size: 15px;
-            }
-        </style>
-    """, unsafe_allow_html=True)
+    st.markdown("<h1 style='font-size: 25px;'>📍 Visualizador de Rutas</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size: 15px;'>Aquí puedes explorar los trazados de rutas disponibles sin mapa de calor.</p>", unsafe_allow_html=True)
 
-    st.markdown("<h1 style='font-size: 25px; margin-bottom: 0.2rem;'>📍 Visualizador de Rutas</h1>", unsafe_allow_html=True)
-    st.markdown("<p class='info-text'>Explora los trazados de rutas disponibles sin mapa de calor.</p>", unsafe_allow_html=True)
 
     kmz_files = [f for f in os.listdir(carpeta_kmz) if f.endswith(".kmz")]
     rutas_disponibles = sorted(set(os.path.splitext(f)[0].split("_")[-1] for f in kmz_files))
@@ -74,33 +58,29 @@ def mostrar_home():
                 linea = LineString([(lon, lat) for lon, lat, _ in coords])
                 bounds = [[linea.bounds[1], linea.bounds[0]], [linea.bounds[3], linea.bounds[2]]]
 
-                m = folium.Map(tiles="OpenStreetMap")
+                m = folium.Map()
+                folium.TileLayer("OpenStreetMap").add_to(m)
                 m.fit_bounds(bounds)
-                folium.GeoJson(linea, style_function=lambda x: {"color": "black", "weight": 8}).add_to(m)
-                folium.GeoJson(linea, style_function=lambda x: {"color": "#3388ff", "weight": 4}).add_to(m)
 
-                # === Guardar el mapa en carpeta 'static/' ===
-                if not os.path.exists("static"):
-                    os.makedirs("static")
+                folium.GeoJson(
+                    linea,
+                    style_function=lambda x: {"color": "black", "weight": 8}
+                ).add_to(m)
 
-                map_filename = f"map_{uuid.uuid4().hex}.html"
-                map_filepath = os.path.join("static", map_filename)
-                m.save(map_filepath)
+                folium.GeoJson(
+                    linea,
+                    style_function=lambda x: {"color": "#3388ff", "weight": 4}
+                ).add_to(m)
 
-                # === Mostrar el mapa desde la ruta servida ===
-                html(f"""
-                    <div class="map-container">
-                        <iframe src="/static/{map_filename}" width="100%" height="100%"></iframe>
-                    </div>
-                """, height=500)
+                st_folium(m, use_container_width=True, height=600)
 
-                # === Elevación y gráfico ===
                 elevaciones = [round(z, 2) for _, _, z in coords]
                 distancias = calcular_distancia_acumulada(coords)
+
                 elev_min = round(min(elevaciones), 2)
                 elev_max = round(max(elevaciones), 2)
 
-                st.markdown(f"<p class='info-text'><b>📈 Elevación:</b> mínima {elev_min} m, máxima {elev_max} m</p>", unsafe_allow_html=True)
+                st.markdown(f"**📈 Elevación:** mínima {elev_min} m, máxima {elev_max} m")
 
                 fig = go.Figure()
                 fig.add_trace(go.Scatter(
@@ -113,11 +93,11 @@ def mostrar_home():
                 ))
 
                 fig.update_layout(
-                    margin=dict(l=10, r=10, t=20, b=20),
+                    margin=dict(l=20, r=20, t=30, b=20),
                     xaxis_title="Distancia (m)",
                     yaxis_title="Elevación (m)",
                     template="plotly_white",
-                    height=260,
+                    height=300,
                     showlegend=False
                 )
 
