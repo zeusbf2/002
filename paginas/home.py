@@ -86,7 +86,7 @@ def mostrar_home():
                     <div class="map-container">
                         <iframe srcdoc="{mapa_html}" width="100%" height="100%"></iframe>
                     </div>
-                """, height=0)
+                """, height=1)
 
                 elevaciones = [round(z, 2) for _, _, z in coords]
                 distancias = calcular_distancia_acumulada(coords)
