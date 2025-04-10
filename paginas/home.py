@@ -37,8 +37,28 @@ def calcular_distancia_acumulada(coords):
     return distancias
 
 def mostrar_home():
-    st.markdown("<h1 style='font-size: 25px;'>📍 Visualizador de Rutas</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='font-size: 15px;'>Aquí puedes explorar los trazados de rutas disponibles sin mapa de calor.</p>", unsafe_allow_html=True)
+    st.markdown("""
+        <style>
+            .main-container {
+                padding: 0;
+            }
+            .map-container {
+                height: 70vh;
+                margin-bottom: 0.5rem;
+            }
+            iframe {
+                border: none;
+            }
+            .info-text {
+                margin: 0;
+                padding: 0 0 0.2rem 0.5rem;
+                font-size: 15px;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown("<h1 style='font-size: 25px; margin-bottom: 0.2rem;'>📍 Visualizador de Rutas</h1>", unsafe_allow_html=True)
+    st.markdown("<p class='info-text'>Explora los trazados de rutas disponibles sin mapa de calor.</p>", unsafe_allow_html=True)
 
     kmz_files = [f for f in os.listdir(carpeta_kmz) if f.endswith(".kmz")]
     rutas_disponibles = sorted(set(os.path.splitext(f)[0].split("_")[-1] for f in kmz_files))
@@ -64,12 +84,12 @@ def mostrar_home():
 
                 mapa_html = m.get_root().render().replace('"', '&quot;')
 
-                # Mostrar el mapa en un contenedor de altura 75% de la pantalla
+                # Mapa con menos separación debajo
                 html(f"""
-                    <div style="height:75vh;">
-                        <iframe srcdoc="{mapa_html}" width="100%" height="100%" style="border:none;"></iframe>
+                    <div class="map-container">
+                        <iframe srcdoc="{mapa_html}" width="100%" height="100%"></iframe>
                     </div>
-                """, height=650)
+                """, height=500)
 
                 elevaciones = [round(z, 2) for _, _, z in coords]
                 distancias = calcular_distancia_acumulada(coords)
@@ -77,7 +97,7 @@ def mostrar_home():
                 elev_min = round(min(elevaciones), 2)
                 elev_max = round(max(elevaciones), 2)
 
-                st.markdown(f"**📈 Elevación:** mínima {elev_min} m, máxima {elev_max} m")
+                st.markdown(f"<p class='info-text'><b>📈 Elevación:</b> mínima {elev_min} m, máxima {elev_max} m</p>", unsafe_allow_html=True)
 
                 fig = go.Figure()
                 fig.add_trace(go.Scatter(
@@ -90,11 +110,11 @@ def mostrar_home():
                 ))
 
                 fig.update_layout(
-                    margin=dict(l=10, r=10, t=30, b=10),
+                    margin=dict(l=10, r=10, t=20, b=20),
                     xaxis_title="Distancia (m)",
                     yaxis_title="Elevación (m)",
                     template="plotly_white",
-                    height=300,
+                    height=260,
                     showlegend=False
                 )
 
