@@ -1,16 +1,15 @@
 import streamlit as st
 
-# Agrega títulos y configuración
-st.set_page_config(page_title="Visualizador de Rutas", layout="wide")
-
-# Menú lateral
+# === Menú lateral ===
 st.sidebar.title("Navegación")
-pagina = st.sidebar.selectbox("Selecciona una página", ["Home", "ISV Mejorado"])
+pagina = st.sidebar.selectbox("Selecciona una página", ["Home", "ISV Mejorado"])  # 👈 Home es el valor por defecto
 
-# Lógica de navegación
+# === Importación de páginas ===
+from paginas.home import mostrar_home
+from paginas.isv_mejorado import mostrar_isv
+
+# === Cargar la página correspondiente ===
 if pagina == "Home":
-    from paginas.home import mostrar_home
     mostrar_home()
 elif pagina == "ISV Mejorado":
-    from paginas.isv_mejorado import mostrar_isv
     mostrar_isv()
