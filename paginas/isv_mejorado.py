@@ -97,7 +97,7 @@ def mostrar_isv():
 
     # === INTERFAZ ===
 
-    st.set_page_config(layout="wide")
+    
     st.title("🗺️ Mapa ISV Mejorado")
 
     kmz_files = [f for f in os.listdir(carpeta_kmz) if f.endswith(".kmz")]
