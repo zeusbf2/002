@@ -8,6 +8,8 @@ from shapely.geometry import LineString
 from geopy.distance import geodesic
 from xml.etree import ElementTree as ET
 
+st.set_page_config(page_title="Visualizador de Rutas", layout="wide")
+
 carpeta_kmz = "tus_kmz"
 
 def extraer_coords_desde_kmz(kmz_path):
@@ -40,7 +42,6 @@ def mostrar_home():
     st.markdown("<h1 style='font-size: 25px;'>📍 Visualizador de Rutas</h1>", unsafe_allow_html=True)
     st.markdown("<p style='font-size: 15px;'>Aquí puedes explorar los trazados de rutas disponibles sin mapa de calor.</p>", unsafe_allow_html=True)
 
-
     kmz_files = [f for f in os.listdir(carpeta_kmz) if f.endswith(".kmz")]
     rutas_disponibles = sorted(set(os.path.splitext(f)[0].split("_")[-1] for f in kmz_files))
     ruta_seleccionada = st.selectbox("Selecciona una ruta:", rutas_disponibles)
@@ -58,8 +59,7 @@ def mostrar_home():
                 linea = LineString([(lon, lat) for lon, lat, _ in coords])
                 bounds = [[linea.bounds[1], linea.bounds[0]], [linea.bounds[3], linea.bounds[2]]]
 
-                m = folium.Map()
-                folium.TileLayer("OpenStreetMap").add_to(m)
+                m = folium.Map(tiles="OpenStreetMap")
                 m.fit_bounds(bounds)
 
                 folium.GeoJson(
@@ -93,7 +93,7 @@ def mostrar_home():
                 ))
 
                 fig.update_layout(
-                    margin=dict(l=20, r=20, t=30, b=20),
+                    margin=dict(l=10, r=10, t=30, b=20),
                     xaxis_title="Distancia (m)",
                     yaxis_title="Elevación (m)",
                     template="plotly_white",
