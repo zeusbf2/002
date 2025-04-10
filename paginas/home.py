@@ -2,12 +2,12 @@ import streamlit as st
 import os
 import zipfile
 import folium
-from streamlit_folium import st_folium
 import plotly.graph_objects as go
 from shapely.geometry import LineString
 from geopy.distance import geodesic
 from xml.etree import ElementTree as ET
 from streamlit.components.v1 import html
+import uuid
 
 carpeta_kmz = "tus_kmz"
 
@@ -79,18 +79,24 @@ def mostrar_home():
                 folium.GeoJson(linea, style_function=lambda x: {"color": "black", "weight": 8}).add_to(m)
                 folium.GeoJson(linea, style_function=lambda x: {"color": "#3388ff", "weight": 4}).add_to(m)
 
-                mapa_html = m.get_root().render().replace('"', '&quot;')
+                # === Guardar el mapa en carpeta 'static/' ===
+                if not os.path.exists("static"):
+                    os.makedirs("static")
 
-                # Mapa con altura ajustada y sin espacio sobrante
+                map_filename = f"map_{uuid.uuid4().hex}.html"
+                map_filepath = os.path.join("static", map_filename)
+                m.save(map_filepath)
+
+                # === Mostrar el mapa desde la ruta servida ===
                 html(f"""
                     <div class="map-container">
-                        <iframe srcdoc="{mapa_html}" width="100%" height="100%"></iframe>
+                        <iframe src="/static/{map_filename}" width="100%" height="100%"></iframe>
                     </div>
-                """, height=1)
+                """, height=500)
 
+                # === Elevación y gráfico ===
                 elevaciones = [round(z, 2) for _, _, z in coords]
                 distancias = calcular_distancia_acumulada(coords)
-
                 elev_min = round(min(elevaciones), 2)
                 elev_max = round(max(elevaciones), 2)
 
