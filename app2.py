@@ -8,12 +8,15 @@ sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 from paginas.home import mostrar_home
 from paginas.isv_mejorado import mostrar_isv
+from paginas.ruta_3d import mostrar_ruta_3d
 
 # Selector de página en la parte superior
-pagina = st.selectbox("Selecciona una página", ["Home", "ISV Mejorado"])
+pagina = st.sidebar.selectbox("Selecciona una página", ["Home", "ISV Mejorado", "Ruta 3D"])
 
 # Mostrar el contenido según la página seleccionada
 if pagina == "Home":
     mostrar_home()
 elif pagina == "ISV Mejorado":
     mostrar_isv()
+elif pagina == "Ruta 3D":
+    mostrar_ruta_3d()
