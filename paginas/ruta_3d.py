@@ -1,9 +1,9 @@
-# paginas/ruta_3d.py
 import streamlit as st
 import os
 import zipfile
 from xml.etree import ElementTree as ET
-import plotly.graph_objects as go
+import pydeck as pdk
+import pandas as pd
 
 carpeta_kmz = "tus_kmz"
 
@@ -20,11 +20,11 @@ def extraer_coords_desde_kmz(kmz_path):
                 partes = line.strip().split(",")
                 if len(partes) == 3:
                     lon, lat, ele = map(float, partes)
-                    coords.append((lon, lat, ele))
+                    coords.append([lon, lat, ele])
             return coords
 
 def mostrar_ruta_3d():
-    st.markdown("## 🌐 Visualizador 3D de Rutas")
+    st.title("🌍 Visualizador 3D de Ruta (Simulado con Pydeck)")
 
     kmz_files = [f for f in os.listdir(carpeta_kmz) if f.endswith(".kmz")]
     rutas_disponibles = sorted(set(os.path.splitext(f)[0].split("_")[-1] for f in kmz_files))
@@ -32,38 +32,49 @@ def mostrar_ruta_3d():
 
     if ruta_seleccionada:
         kmz_filename = next((f for f in kmz_files if f.endswith(f"{ruta_seleccionada}.kmz")), None)
-        if kmz_filename:
-            ruta = os.path.join(carpeta_kmz, kmz_filename)
-            try:
-                coords = extraer_coords_desde_kmz(ruta)
-                if not coords:
-                    st.warning("No se encontraron coordenadas.")
-                    return
+        ruta = os.path.join(carpeta_kmz, kmz_filename)
 
-                lons = [p[0] for p in coords]
-                lats = [p[1] for p in coords]
-                elev = [p[2] for p in coords]
+        try:
+            coords = extraer_coords_desde_kmz(ruta)
+            if not coords:
+                st.warning("No se encontraron coordenadas.")
+                return
 
-                fig = go.Figure(data=[go.Scatter3d(
-                    x=lons,
-                    y=lats,
-                    z=elev,
-                    mode='lines',
-                    line=dict(color='blue', width=5),
-                )])
+            df = pd.DataFrame(coords, columns=["lon", "lat", "elev"])
+            path_data = [{
+                'path': coords,
+                'name': 'Ruta',
+                'color': [0, 102, 204]  # Azul
+            }]
 
-                fig.update_layout(
-                    margin=dict(l=0, r=0, b=0, t=30),
-                    scene=dict(
-                        xaxis_title='Longitud',
-                        yaxis_title='Latitud',
-                        zaxis_title='Altura (m)',
-                        aspectmode='data'
-                    ),
-                    title="Vista 3D de la Ruta"
-                )
+            view_state = pdk.ViewState(
+                longitude=df["lon"].mean(),
+                latitude=df["lat"].mean(),
+                zoom=13,
+                pitch=60,    # Inclinación
+                bearing=30   # Rotación
+            )
 
-                st.plotly_chart(fig, use_container_width=True)
+            layer = pdk.Layer(
+                "PathLayer",
+                data=path_data,
+                get_path="path",
+                get_color="color",
+                width_scale=10,
+                width_min_pixels=2,
+                get_width=5,
+                pickable=True,
+                auto_highlight=True
+            )
 
-            except Exception as e:
-                st.error(f"Error al procesar el archivo KMZ: {e}")
+            deck = pdk.Deck(
+                layers=[layer],
+                initial_view_state=view_state,
+                map_style='mapbox://styles/mapbox/satellite-v9',
+                tooltip={"text": "{name}"}
+            )
+
+            st.pydeck_chart(deck)
+
+        except Exception as e:
+            st.error(f"Error al procesar el archivo KMZ: {e}")
