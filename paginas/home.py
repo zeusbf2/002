@@ -108,7 +108,6 @@ def mostrar_home():
 
                 st.markdown(f"**📈 Elevación:** mínima {elev_min} m, máxima {elev_max} m")
 
-                # Gráfico 2D de elevación
                 fig = go.Figure()
                 fig.add_trace(go.Scatter(
                     x=distancias,
@@ -130,31 +129,7 @@ def mostrar_home():
 
                 st.plotly_chart(fig, use_container_width=True)
 
-                # Gráfico 3D de elevación
-                with st.expander("🌄 Ver perfil 3D de elevación"):
-                    fig3d = go.Figure(data=[go.Scatter3d(
-                        x=distancias,
-                        y=[0]*len(elevaciones),  # eje Z fijo
-                        z=elevaciones,
-                        mode='lines',
-                        line=dict(color='royalblue', width=4),
-                    )])
-
-                    fig3d.update_layout(
-                        scene=dict(
-                            xaxis_title='Distancia (m)',
-                            yaxis_title='',
-                            zaxis_title='Elevación (m)',
-                            camera=dict(eye=dict(x=1.7, y=0.3, z=0.7))
-                        ),
-                        margin=dict(l=0, r=0, t=30, b=0),
-                        height=400,
-                        title='Perfil de elevación 3D'
-                    )
-
-                    st.plotly_chart(fig3d, use_container_width=True)
-
             except Exception as e:
                 st.error(f"Error al procesar el archivo KMZ: {e}")
         else:
-            st.warning("No se encontró el archivo KMZ para esta ruta.")
+            st.warning("No se encontró el archivo KMZ para esta ruta.") 
