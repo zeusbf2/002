@@ -1,4 +1,4 @@
-if pagina == "3D":
+if pagina == "ruta_3d":
     st.title("🛰️ Visor 3D Externo")
     st.markdown("Abre el visor CesiumJS en una nueva pestaña:")
     st.markdown(
