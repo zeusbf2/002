@@ -12,7 +12,7 @@ from paginas.ruta_3d import mostrar_ruta_3d
 from paginas.mostrar_todas_rutas_isv import mostrar_todas_rutas_isv
 
 # Selector de página en la parte superior
-pagina = st.sidebar.selectbox("Selecciona una página", ["Home", "ISV Mejorado", "Ruta 3D"])
+pagina = st.sidebar.selectbox("Selecciona una página", ["Home", "ISV Mejorado", "Ruta 3D", "Todas las rutas ISV"])
 
 # Mostrar el contenido según la página seleccionada
 if pagina == "Home":
