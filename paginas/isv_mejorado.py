@@ -14,7 +14,7 @@ def mostrar_isv():
 
     # === CONFIG ===
     archivo_excel = "INDICES CACC_IMN.xlsx"
-    hoja = "Indices Reales Normalizados"
+    hoja = "Indices Mejorados Normalizados"
     carpeta_kmz = "tus_kmz"
 
     # === FUNCIONES ===
