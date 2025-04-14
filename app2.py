@@ -20,3 +20,5 @@ elif pagina == "ISV Mejorado":
     mostrar_isv()
 elif pagina == "Ruta 3D":
     mostrar_ruta_3d()
+elif pagina == "Todas las rutas ISV":
+    mostrar_todas_rutas_isv()
