@@ -13,6 +13,20 @@ def mostrar_isvr():
     hoja = "Indices Reales Normalizados"
     carpeta_kml = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "tus_kmz"))
 
+    opciones_capa = {
+        "Satélite + Nombres (limpio)": {
+            "tiles": "https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}",
+            "subdomains": ["mt0", "mt1", "mt2", "mt3"],
+            "attr": "Google Maps Satélite + Nombres"
+        },
+        "Mapa base (OpenStreetMap)": {
+            "tiles": "OpenStreetMap",
+            "attr": "OpenStreetMap"
+        }
+    }
+
+    capa_seleccionada = st.selectbox("🗺️ Elige la capa base del mapa:", list(opciones_capa.keys()), key="capa_base_mapa")
+
     @st.cache_data
     def cargar_valores_excel(nombre_ruta):
         df = pd.read_excel(archivo_excel, sheet_name=hoja, header=None, engine='openpyxl')
@@ -86,16 +100,17 @@ def mostrar_isvr():
 
         return segmentos
 
-    def construir_mapa(segmentos, valores, bounds):
+    def construir_mapa(segmentos, valores, bounds, capa_base):
         m = folium.Map()
+        capa_info = opciones_capa[capa_base]
         folium.TileLayer(
-            tiles="https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-            attr="Google Hybrid",
-            name="Satélite + Nombres",
+            tiles=capa_info["tiles"],
+            attr=capa_info["attr"],
+            subdomains=capa_info.get("subdomains", []),
             max_zoom=20,
-            subdomains=["mt0", "mt1", "mt2", "mt3"]
+            name=capa_base
         ).add_to(m)
-        folium.TileLayer("OpenStreetMap", name="Mapa base").add_to(m)
+
         m.fit_bounds(bounds)
 
         for i, seg in enumerate(segmentos):
@@ -122,7 +137,6 @@ def mostrar_isvr():
                 """
                 folium.Marker(location=[label_y, label_x], icon=folium.DivIcon(html=icon_html)).add_to(m)
 
-        folium.LayerControl().add_to(m)
         return m
 
     st.markdown("<h1 style='font-size: 30px;'>🗺️ Mapa ISV Real</h1>", unsafe_allow_html=True)
@@ -167,7 +181,6 @@ def mostrar_isvr():
                 segmentos = dividir_linea_por_km_real(linea)
                 bounds = [[linea.bounds[1], linea.bounds[0]], [linea.bounds[3], linea.bounds[2]]]
 
-                # Guardar en session_state los datos (NO el mapa)
                 st.session_state[clave_segmentos] = segmentos
                 st.session_state[clave_valores] = valores
                 st.session_state[clave_long] = long_km
@@ -177,12 +190,11 @@ def mostrar_isvr():
                 st.error(f"Error al procesar la ruta: {e}")
                 return
 
-        # Usar los datos guardados para construir el mapa
         segmentos = st.session_state[clave_segmentos]
         valores = st.session_state[clave_valores]
         long_km = st.session_state[clave_long]
         bounds = st.session_state[clave_bounds]
-        m = construir_mapa(segmentos, valores, bounds)
+        m = construir_mapa(segmentos, valores, bounds, capa_seleccionada)
 
         st.info(f"📏 Longitud total del KML: {long_km:.2f} km")
         col1, col2 = st.columns([1, 4])
