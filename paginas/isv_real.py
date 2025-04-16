@@ -87,48 +87,62 @@ def mostrar_isvr():
         return segmentos
 
     def construir_mapa(segmentos, valores, bounds, capa_base):
-        m = folium.Map()
-        if capa_base == "Satélite + Nombres":
-            folium.TileLayer(
-                tiles="https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-                attr="Google Hybrid",
-                name="Satélite + Nombres",
-                max_zoom=20,
-                subdomains=["mt0", "mt1", "mt2", "mt3"]
-            ).add_to(m)
-        else:
-            folium.TileLayer("OpenStreetMap", name="Mapa base").add_to(m)
+        with st.status("🧱 Inicializando construcción del mapa...", expanded=True) as status:
+            status.write("🗺️ Generando mapa base...")
+            m = folium.Map()
+            if capa_base == "Satélite + Nombres":
+                status.write("🛰️ Agregando capa satelital...")
+                folium.TileLayer(
+                    tiles="https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+                    attr="Google Hybrid",
+                    name="Satélite + Nombres",
+                    max_zoom=20,
+                    subdomains=["mt0", "mt1", "mt2", "mt3"]
+                ).add_to(m)
+            else:
+                status.write("🗺️ Agregando capa base (OpenStreetMap)...")
+                folium.TileLayer("OpenStreetMap", name="Mapa base").add_to(m)
 
-        m.fit_bounds(bounds)
+            status.write("📍 Ajustando vista al área de la ruta...")
+            m.fit_bounds(bounds)
 
-        for i, seg in enumerate(segmentos):
-            color = valor_a_color(valores[i]) if i < len(valores) else "#FFFFFF"
-            folium.GeoJson(mapping(seg), style_function=lambda x: {"color": "black", "weight": 9}).add_to(m)
-            folium.GeoJson(mapping(seg), style_function=(lambda col=color: lambda x: {"color": col, "weight": 5})(color)).add_to(m)
+            barra = st.progress(0, text="🎨 Procesando segmentos...")
+            total = len(segmentos)
 
-            coords = list(seg.coords)
-            if len(coords) >= 2:
-                dx = coords[1][0] - coords[0][0]
-                dy = coords[1][1] - coords[0][1]
-                label_x = coords[0][0] + dx * 0.03
-                label_y = coords[0][1] + dy * 0.03 - 0.0020
+            for i, seg in enumerate(segmentos):
+                color = valor_a_color(valores[i]) if i < len(valores) else "#FFFFFF"
+                status.write(f"🎨 Añadiendo segmento {i+1} de {total} con color {color}")
+                folium.GeoJson(mapping(seg), style_function=lambda x: {"color": "black", "weight": 9}).add_to(m)
+                folium.GeoJson(mapping(seg), style_function=(lambda col=color: lambda x: {"color": col, "weight": 5})(color)).add_to(m)
 
-                icon_html = f"""
-                <div style="background-color: {color}; color: black;
-                            border-radius: 50%; width: 32px; height: 32px;
-                            display: flex; align-items: center; justify-content: center;
-                            font-weight: bold; font-size: 13px;
-                            border: 2px solid #00000088;
-                            box-shadow: 1px 1px 6px rgba(0,0,0,0.5);">
-                    {i+1}
-                </div>
-                """
-                folium.Marker(location=[label_y, label_x], icon=folium.DivIcon(html=icon_html)).add_to(m)
+                coords = list(seg.coords)
+                if len(coords) >= 2:
+                    dx = coords[1][0] - coords[0][0]
+                    dy = coords[1][1] - coords[0][1]
+                    label_x = coords[0][0] + dx * 0.03
+                    label_y = coords[0][1] + dy * 0.03 - 0.0020
 
-        folium.LayerControl().add_to(m)
-        return m
+                    status.write(f"📌 Colocando marcador en segmento {i+1}")
+                    icon_html = f"""
+                    <div style="background-color: {color}; color: black;
+                                border-radius: 50%; width: 32px; height: 32px;
+                                display: flex; align-items: center; justify-content: center;
+                                font-weight: bold; font-size: 13px;
+                                border: 2px solid #00000088;
+                                box-shadow: 1px 1px 6px rgba(0,0,0,0.5);">
+                        {i+1}
+                    </div>
+                    """
+                    folium.Marker(location=[label_y, label_x], icon=folium.DivIcon(html=icon_html)).add_to(m)
 
-    st.markdown("<h1 style='font-size: 30px;'>🗺️ Mapa ISV Real</h1>", unsafe_allow_html=True)
+                barra.progress((i + 1) / total, text=f"Segmento {i+1} de {total} listo")
+
+            status.write("✅ Añadiendo control de capas...")
+            folium.LayerControl().add_to(m)
+            status.update(label="✅ Mapa completo con segmentos y marcadores.", state="complete")
+            return m
+
+        st.markdown("<h1 style='font-size: 30px;'>🗺️ Mapa ISV Real</h1>", unsafe_allow_html=True)
 
     kml_files = [f for f in os.listdir(carpeta_kml) if f.endswith(".kml")]
     rutas_disponibles = sorted(set(os.path.splitext(f)[0].split("_")[-1] for f in kml_files))
@@ -143,6 +157,7 @@ def mostrar_isvr():
         clave_bounds = f"bounds_{ruta_seleccionada}"
 
         if clave_segmentos not in st.session_state:
+            st.status("📂 Cargando datos desde Excel y KML...")
             valores = cargar_valores_excel(ruta_seleccionada)
             if valores is None:
                 st.warning("No se encontraron datos para esta ruta en el Excel.")
