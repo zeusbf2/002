@@ -86,16 +86,19 @@ def mostrar_isvr():
 
         return segmentos
 
-    def construir_mapa(segmentos, valores, bounds):
+    def construir_mapa(segmentos, valores, bounds, capa_base):
         m = folium.Map()
-        folium.TileLayer(
-            tiles="https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-            attr="Google Hybrid",
-            name="Satélite + Nombres",
-            max_zoom=20,
-            subdomains=["mt0", "mt1", "mt2", "mt3"]
-        ).add_to(m)
-        folium.TileLayer("OpenStreetMap", name="Mapa base").add_to(m)
+        if capa_base == "Satélite + Nombres":
+            folium.TileLayer(
+                tiles="https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+                attr="Google Hybrid",
+                name="Satélite + Nombres",
+                max_zoom=20,
+                subdomains=["mt0", "mt1", "mt2", "mt3"]
+            ).add_to(m)
+        else:
+            folium.TileLayer("OpenStreetMap", name="Mapa base").add_to(m)
+
         m.fit_bounds(bounds)
 
         for i, seg in enumerate(segmentos):
@@ -130,6 +133,8 @@ def mostrar_isvr():
     kml_files = [f for f in os.listdir(carpeta_kml) if f.endswith(".kml")]
     rutas_disponibles = sorted(set(os.path.splitext(f)[0].split("_")[-1] for f in kml_files))
     ruta_seleccionada = st.selectbox("Selecciona una ruta:", rutas_disponibles, key="select_ruta_isvr")
+
+    capa_base = st.radio("Capa base:", ["Satélite + Nombres", "Mapa base"], horizontal=True)
 
     if ruta_seleccionada:
         clave_segmentos = f"segmentos_{ruta_seleccionada}"
@@ -167,7 +172,6 @@ def mostrar_isvr():
                 segmentos = dividir_linea_por_km_real(linea)
                 bounds = [[linea.bounds[1], linea.bounds[0]], [linea.bounds[3], linea.bounds[2]]]
 
-                # Guardar en session_state los datos (NO el mapa)
                 st.session_state[clave_segmentos] = segmentos
                 st.session_state[clave_valores] = valores
                 st.session_state[clave_long] = long_km
@@ -177,14 +181,13 @@ def mostrar_isvr():
                 st.error(f"Error al procesar la ruta: {e}")
                 return
 
-        # Usar los datos guardados para construir el mapa
         segmentos = st.session_state[clave_segmentos]
         valores = st.session_state[clave_valores]
         long_km = st.session_state[clave_long]
         bounds = st.session_state[clave_bounds]
-        m = construir_mapa(segmentos, valores, bounds)
+        m = construir_mapa(segmentos, valores, bounds, capa_base)
 
-        st.info(f"📏 Longitud total del KML: {long_km:.2f} km")
+        st.info(f"📍 Longitud total del KML: {long_km:.2f} km")
         col1, col2 = st.columns([1, 4])
         with col1:
             st.markdown("### 🗺️ Leyenda")
