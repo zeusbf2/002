@@ -8,11 +8,15 @@ from xml.etree import ElementTree as ET
 from geopy.distance import geodesic
 from streamlit_folium import st_folium
 
-def mostrar_isvr():
-    archivo_excel = "INDICES CACC_IRN.xlsx"
-    hoja = "Indices Reales Normalizados"
-    carpeta_kml = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "tus_kmz"))
+# === RUTAS ROBUSTAS ===
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+RAIZ_PROYECTO = os.path.abspath(os.path.join(BASE_DIR, ".."))
 
+archivo_excel = os.path.join(RAIZ_PROYECTO, "INDICES CACC_IRN.xlsx")
+carpeta_kml = os.path.join(RAIZ_PROYECTO, "tus_kmz")
+hoja = "Indices Reales Normalizados"
+
+def mostrar_isvr():
     opciones_capa = {
         "Satélite + Nombres (limpio)": {
             "tiles": "https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}",
@@ -25,7 +29,27 @@ def mostrar_isvr():
         }
     }
 
+    st.markdown("<h1 style='font-size: 30px;'>🗺️ Mapa ISV Real</h1>", unsafe_allow_html=True)
+
+    # Validaciones iniciales
+    if not os.path.exists(archivo_excel):
+        st.error(f"No se encontró el archivo Excel: {archivo_excel}")
+        return
+    if not os.path.exists(carpeta_kml):
+        st.error(f"No se encontró la carpeta de archivos KML: {carpeta_kml}")
+        return
+
+    kml_files = [f for f in os.listdir(carpeta_kml) if f.endswith(".kml")]
+    if not kml_files:
+        st.warning("No se encontraron archivos KML.")
+        return
+
     capa_seleccionada = st.selectbox("🗺️ Elige la capa base del mapa:", list(opciones_capa.keys()), key="capa_base_mapa")
+
+    rutas_disponibles = sorted(set(os.path.splitext(f)[0].split("_")[-1] for f in kml_files))
+    ruta_seleccionada = st.selectbox("Selecciona una ruta:", rutas_disponibles, key="select_ruta_isvr")
+
+    # === FUNCIONES INTERNAS ===
 
     @st.cache_data
     def cargar_valores_excel(nombre_ruta):
@@ -35,7 +59,7 @@ def mostrar_isvr():
         if coincidencias.empty:
             return None
         idx_col = coincidencias.index[0]
-        columna = df.loc[18:97, idx_col]
+        columna = df.loc[18:721, idx_col]
         valores = []
         for v in columna:
             try:
@@ -82,22 +106,18 @@ def mostrar_isvr():
         segmentos = []
         segmento = [coords[0]]
         dist_acum = 0.0
-
         for i in range(1, len(coords)):
             p1 = (coords[i - 1][1], coords[i - 1][0])
             p2 = (coords[i][1], coords[i][0])
             d = geodesic(p1, p2).meters
             dist_acum += d
             segmento.append(coords[i])
-
             if dist_acum >= 1000:
                 segmentos.append(LineString(segmento))
                 segmento = [coords[i]]
                 dist_acum = 0.0
-
         if len(segmento) > 1:
             segmentos.append(LineString(segmento))
-
         return segmentos
 
     def construir_mapa(segmentos, valores, bounds, capa_base):
@@ -138,12 +158,6 @@ def mostrar_isvr():
                 folium.Marker(location=[label_y, label_x], icon=folium.DivIcon(html=icon_html)).add_to(m)
 
         return m
-
-    st.markdown("<h1 style='font-size: 30px;'>🗺️ Mapa ISV Real</h1>", unsafe_allow_html=True)
-
-    kml_files = [f for f in os.listdir(carpeta_kml) if f.endswith(".kml")]
-    rutas_disponibles = sorted(set(os.path.splitext(f)[0].split("_")[-1] for f in kml_files))
-    ruta_seleccionada = st.selectbox("Selecciona una ruta:", rutas_disponibles, key="select_ruta_isvr")
 
     if ruta_seleccionada:
         clave_segmentos = f"segmentos_{ruta_seleccionada}"
