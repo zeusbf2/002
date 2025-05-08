@@ -1,5 +1,5 @@
-import streamlit as st
 import os
+import streamlit as st
 import zipfile
 import folium
 from streamlit_folium import st_folium
@@ -8,7 +8,38 @@ from shapely.geometry import LineString
 from geopy.distance import geodesic
 from xml.etree import ElementTree as ET
 
-carpeta_kmz = "tus_kmz"
+# ============================
+# RUTAS BASE
+# ============================
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+RAIZ_PROYECTO = os.path.abspath(os.path.join(BASE_DIR, ".."))
+
+carpeta_kmz = os.path.join(RAIZ_PROYECTO, "tus_kmz")
+carpeta_csv = os.path.join(RAIZ_PROYECTO, "datos_csv")
+carpeta_shp = os.path.join(RAIZ_PROYECTO, "shapefiles")
+
+# ============================
+# VERIFICACIÓN DE CARPETAS
+# ============================
+
+carpetas_a_verificar = [
+    (carpeta_kmz, ".kmz"),
+    (carpeta_csv, ".csv"),
+    (carpeta_shp, ".shp"),
+]
+
+for ruta, extension in carpetas_a_verificar:
+    if not os.path.exists(ruta):
+        st.warning(f"⚠️ La carpeta `{ruta}` no existe.")
+    else:
+        archivos_validos = [f for f in os.listdir(ruta) if f.endswith(extension)]
+        if not archivos_validos:
+            st.warning(f"⚠️ La carpeta `{ruta}` está vacía o no contiene archivos `{extension}`.")
+
+# ============================
+# FUNCIONES
+# ============================
 
 def extraer_coords_desde_kmz(kmz_path):
     with zipfile.ZipFile(kmz_path, 'r') as z:
@@ -36,10 +67,23 @@ def calcular_distancia_acumulada(coords):
         distancias.append(distancias[-1] + d)
     return distancias
 
+# ============================
+# PÁGINA PRINCIPAL
+# ============================
+
 def mostrar_home():
     st.markdown("<h1 style='font-size: 15px;'>📍 Visualizador de Rutas</h1>", unsafe_allow_html=True)
 
-    kmz_files = [f for f in os.listdir(carpeta_kmz) if f.endswith(".kmz")]
+    try:
+        kmz_files = [f for f in os.listdir(carpeta_kmz) if f.endswith(".kmz")]
+    except FileNotFoundError:
+        st.error(f"La carpeta `{carpeta_kmz}` no existe.")
+        return
+
+    if not kmz_files:
+        st.warning("No se encontraron archivos KMZ.")
+        return
+
     rutas_disponibles = sorted(set(os.path.splitext(f)[0].split("_")[-1] for f in kmz_files))
     ruta_seleccionada = st.selectbox("Selecciona una ruta:", rutas_disponibles)
 
@@ -57,11 +101,7 @@ def mostrar_home():
                 bounds = [[linea.bounds[1], linea.bounds[0]], [linea.bounds[3], linea.bounds[2]]]
 
                 m = folium.Map()
-
-                # Capa base OSM
                 folium.TileLayer("OpenStreetMap", name="Mapa Base").add_to(m)
-
-                # Capa satelital ESRI
                 folium.TileLayer(
                     tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
                     attr="Esri",
@@ -69,8 +109,6 @@ def mostrar_home():
                     overlay=False,
                     control=True
                 ).add_to(m)
-
-                # Capa de etiquetas (nombres de ciudades, límites)
                 folium.TileLayer(
                     tiles="https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
                     attr="Esri",
@@ -79,33 +117,19 @@ def mostrar_home():
                     control=True
                 ).add_to(m)
 
-                # Ajustar vista del mapa
                 m.fit_bounds(bounds)
 
-                # Línea doble (borde negro + azul)
-                folium.GeoJson(
-                    linea,
-                    style_function=lambda x: {"color": "black", "weight": 8}
-                ).add_to(m)
-
-                folium.GeoJson(
-                    linea,
-                    style_function=lambda x: {"color": "#3388ff", "weight": 4}
-                ).add_to(m)
-
-                # Control de capas
+                folium.GeoJson(linea, style_function=lambda x: {"color": "black", "weight": 8}).add_to(m)
+                folium.GeoJson(linea, style_function=lambda x: {"color": "#3388ff", "weight": 4}).add_to(m)
                 folium.LayerControl().add_to(m)
 
-                # Mostrar mapa
                 st_folium(m, use_container_width=True, height=400)
 
-                # Elevaciones y gráfico
                 elevaciones = [round(z, 2) for _, _, z in coords]
                 distancias = calcular_distancia_acumulada(coords)
 
                 elev_min = round(min(elevaciones), 2)
                 elev_max = round(max(elevaciones), 2)
-
                 st.markdown(f"**📈 Elevación:** mínima {elev_min} m, máxima {elev_max} m")
 
                 fig = go.Figure()
@@ -117,7 +141,6 @@ def mostrar_home():
                     fill="tozeroy",
                     name="Altura (m)"
                 ))
-
                 fig.update_layout(
                     margin=dict(l=20, r=20, t=30, b=20),
                     xaxis_title="Distancia (m)",
@@ -132,4 +155,4 @@ def mostrar_home():
             except Exception as e:
                 st.error(f"Error al procesar el archivo KMZ: {e}")
         else:
-            st.warning("No se encontró el archivo KMZ para esta ruta.") 
+            st.warning("No se encontró el archivo KMZ para esta ruta.")
