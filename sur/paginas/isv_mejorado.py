@@ -44,7 +44,7 @@ def mostrar_isv():
         if coincidencias.empty:
             return None
         idx_col = coincidencias.index[0]
-        columna = df.loc[18:97, idx_col]
+        columna = df.loc[18:721, idx_col]
         valores = []
         for v in columna:
             try:
