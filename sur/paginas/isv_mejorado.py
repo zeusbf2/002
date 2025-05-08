@@ -13,9 +13,12 @@ from streamlit_folium import st_folium
 def mostrar_isv():
 
     # === CONFIG ===
-    archivo_excel = "INDICES CACC_IMN.xlsx"
-    hoja = "Indices Mejorados Normalizados"
-    carpeta_kmz = "tus_kmz"
+  BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+RAIZ_PROYECTO = os.path.abspath(os.path.join(BASE_DIR, ".."))
+
+carpeta_kmz = os.path.join(RAIZ_PROYECTO, "tus_kmz")
+archivo_excel = os.path.join(RAIZ_PROYECTO, "INDICES CACC_IMN.xlsx")
+hoja = "Indices Mejorados Normalizados"
 
     # === FUNCIONES ===
 
