@@ -10,15 +10,16 @@ from xml.etree import ElementTree as ET
 from geopy.distance import geodesic
 from streamlit_folium import st_folium
 
-def mostrar_isv():
-
-    # === CONFIG ===
-  BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 RAIZ_PROYECTO = os.path.abspath(os.path.join(BASE_DIR, ".."))
 
 carpeta_kmz = os.path.join(RAIZ_PROYECTO, "tus_kmz")
 archivo_excel = os.path.join(RAIZ_PROYECTO, "INDICES CACC_IMN.xlsx")
 hoja = "Indices Mejorados Normalizados"
+def mostrar_isv():
+
+    # === CONFIG ===
+ 
 
     # === FUNCIONES ===
 
