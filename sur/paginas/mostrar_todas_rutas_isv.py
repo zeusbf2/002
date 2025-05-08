@@ -9,14 +9,34 @@ from xml.etree import ElementTree as ET
 from geopy.distance import geodesic
 from streamlit_folium import st_folium
 
+# === RUTAS ROBUSTAS ===
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+RAIZ_PROYECTO = os.path.abspath(os.path.join(BASE_DIR, ".."))
+
+archivo_excel = os.path.join(RAIZ_PROYECTO, "INDICES CACC_IMN.xlsx")
+hoja = "Indices Mejorados Normalizados"
+carpeta_kmz = os.path.join(RAIZ_PROYECTO, "tus_kmz")
+
 def mostrar_todas_rutas_isv():
-    archivo_excel = "INDICES CACC_IMN.xlsx"
-    hoja = "Indices Mejorados Normalizados"
-    carpeta_kmz = "tus_kmz"
+    st.markdown("<h1 style='font-size: 30px;'>🗺️ Mapa ISV Global Mejorado</h1>", unsafe_allow_html=True)
 
+    # Validaciones
+    if not os.path.exists(archivo_excel):
+        st.error(f"No se encontró el archivo Excel: {archivo_excel}")
+        return
+    if not os.path.exists(carpeta_kmz):
+        st.error(f"No se encontró la carpeta de archivos KMZ: {carpeta_kmz}")
+        return
 
+    kmz_files = [f for f in os.listdir(carpeta_kmz) if f.endswith(".kmz")]
+    rutas_disponibles = sorted(set(os.path.splitext(f)[0].split("_")[-1] for f in kmz_files))
 
-    # Cargar Excel una sola vez
+    if not rutas_disponibles:
+        st.warning("No se encontraron archivos KMZ en la carpeta.")
+        return
+
+    # === FUNCIONES INTERNAS ===
+
     df_excel = pd.read_excel(archivo_excel, sheet_name=hoja, header=None, engine='openpyxl')
 
     def cargar_valores_excel(nombre_ruta, df):
@@ -25,7 +45,7 @@ def mostrar_todas_rutas_isv():
         if coincidencias.empty:
             return None
         idx_col = coincidencias.index[0]
-        columna = df.loc[18:97, idx_col]
+        columna = df.loc[18:721, idx_col]
         valores = []
         for v in columna:
             try:
@@ -87,14 +107,7 @@ def mostrar_todas_rutas_isv():
             segmentos.append(LineString(segmento))
         return segmentos
 
-    st.markdown("<h1 style='font-size: 30px;'>🗺️ Mapa ISV Global Mejorado</h1>", unsafe_allow_html=True)
-
-    kmz_files = [f for f in os.listdir(carpeta_kmz) if f.endswith(".kmz")]
-    rutas_disponibles = sorted(set(os.path.splitext(f)[0].split("_")[-1] for f in kmz_files))
-
-    if not rutas_disponibles:
-        st.warning("No se encontraron archivos KMZ en la carpeta.")
-        return
+    # === MAPA Y VISUALIZACIÓN ===
 
     m = folium.Map()
     folium.TileLayer(
@@ -117,7 +130,8 @@ def mostrar_todas_rutas_isv():
             continue
 
         try:
-            linea = cargar_linea_desde_kmz(os.path.join(carpeta_kmz, kmz_filename))
+            kmz_path = os.path.join(carpeta_kmz, kmz_filename)
+            linea = cargar_linea_desde_kmz(kmz_path)
             segmentos = dividir_linea_por_km_real(linea)
 
             for i, seg in enumerate(segmentos):
