@@ -1,28 +1,42 @@
 import streamlit as st
 import zipfile
 import os
-import io
-import pandas as pd
 import math
 import folium
+import pandas as pd
 from shapely.geometry import LineString, mapping
 from xml.etree import ElementTree as ET
 from geopy.distance import geodesic
 from streamlit_folium import st_folium
 
- BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# === RUTAS ROBUSTAS ===
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 RAIZ_PROYECTO = os.path.abspath(os.path.join(BASE_DIR, ".."))
 
 carpeta_kmz = os.path.join(RAIZ_PROYECTO, "tus_kmz")
 archivo_excel = os.path.join(RAIZ_PROYECTO, "INDICES CACC_IMN.xlsx")
 hoja = "Indices Mejorados Normalizados"
+
 def mostrar_isv():
+    st.markdown("<h1 style='font-size: 30px;'>🗺️ Mapa ISV Mejorado</h1>", unsafe_allow_html=True)
 
-    # === CONFIG ===
- 
+    # Validaciones previas
+    if not os.path.exists(archivo_excel):
+        st.error(f"No se encontró el archivo Excel: {archivo_excel}")
+        return
+    if not os.path.exists(carpeta_kmz):
+        st.error(f"No se encontró la carpeta de archivos KMZ: {carpeta_kmz}")
+        return
 
-    # === FUNCIONES ===
+    kmz_files = [f for f in os.listdir(carpeta_kmz) if f.endswith(".kmz")]
+    if not kmz_files:
+        st.warning("No se encontraron archivos KMZ.")
+        return
 
+    rutas_disponibles = sorted(set(os.path.splitext(f)[0].split("_")[-1] for f in kmz_files))
+    ruta_seleccionada = st.selectbox("Selecciona una ruta:", rutas_disponibles)
+
+    # === FUNCIONES INTERNAS ===
     def cargar_valores_excel(nombre_ruta):
         df = pd.read_excel(archivo_excel, sheet_name=hoja, header=None, engine='openpyxl')
         fila_nombres = df.iloc[3, 2:].astype(str).str.strip()
@@ -58,21 +72,6 @@ def mostrar_isv():
         else:
             return "#FFFFFF"
 
-    def calcular_perpendicular(p1, p2, length=0.00015):
-        dx = p2[0] - p1[0]
-        dy = p2[1] - p1[1]
-        mag = math.hypot(dx, dy)
-        if mag == 0:
-            return None
-        dx /= mag
-        dy /= mag
-        px = -dy
-        py = dx
-        mid = p1
-        start = (mid[0] + px * length / 2, mid[1] + py * length / 2)
-        end = (mid[0] - px * length / 2, mid[1] - py * length / 2)
-        return [start, end]
-
     def cargar_linea_desde_kmz(kmz_path):
         with zipfile.ZipFile(kmz_path, 'r') as z:
             kml_file = next(f for f in z.namelist() if f.endswith('.kml'))
@@ -94,31 +93,28 @@ def mostrar_isv():
         segmentos = []
         segmento = [coords[0]]
         dist_acum = 0.0
-
         for i in range(1, len(coords)):
             p1 = (coords[i - 1][1], coords[i - 1][0])
             p2 = (coords[i][1], coords[i][0])
             d = geodesic(p1, p2).meters
             dist_acum += d
             segmento.append(coords[i])
-
             if dist_acum >= 1000:
                 segmentos.append(LineString(segmento))
                 segmento = [coords[i]]
                 dist_acum = 0.0
-
         if len(segmento) > 1:
             segmentos.append(LineString(segmento))
-
         return segmentos
 
-    
-    st.markdown("<h1 style='font-size: 30px;'>🗺️ Mapa ISV Mejorado</h1>", unsafe_allow_html=True)
-
-
-    kmz_files = [f for f in os.listdir(carpeta_kmz) if f.endswith(".kmz")]
-    rutas_disponibles = sorted(set(os.path.splitext(f)[0].split("_")[-1] for f in kmz_files))
-    ruta_seleccionada = st.selectbox("Selecciona una ruta:", rutas_disponibles)
+    def longitud_geodesica_total(linea):
+        coords = list(linea.coords)
+        total = 0
+        for i in range(1, len(coords)):
+            p1 = (coords[i - 1][1], coords[i - 1][0])
+            p2 = (coords[i][1], coords[i][0])
+            total += geodesic(p1, p2).meters
+        return total / 1000  # km
 
     if ruta_seleccionada:
         valores = cargar_valores_excel(ruta_seleccionada)
@@ -131,27 +127,17 @@ def mostrar_isv():
             st.error("No se encontró el archivo KMZ para esta ruta.")
             return
 
-        ruta = os.path.join(carpeta_kmz, kmz_filename)
+        ruta_kmz = os.path.join(carpeta_kmz, kmz_filename)
 
         try:
-            linea = cargar_linea_desde_kmz(ruta)
-                # Calcular longitud geodésica total
-            def longitud_geodesica_total(linea):
-                coords = list(linea.coords)
-                total = 0
-                for i in range(1, len(coords)):
-                    p1 = (coords[i-1][1], coords[i-1][0])
-                    p2 = (coords[i][1], coords[i][0])
-                    total += geodesic(p1, p2).meters
-                return total / 1000  # en km
-
+            linea = cargar_linea_desde_kmz(ruta_kmz)
             long_km = longitud_geodesica_total(linea)
             st.info(f"📏 Longitud total del KMZ: {long_km:.2f} km")
 
             segmentos = dividir_linea_por_km_real(linea)
 
             if len(valores) < len(segmentos):
-                st.warning(f"La ruta tiene {len(segmentos)} tramos, pero el Excel solo tiene {len(valores)} valores. El resto será blanco (sin datos).")
+                st.warning(f"La ruta tiene {len(segmentos)} tramos, pero el Excel solo tiene {len(valores)} valores. El resto será blanco.")
 
             bounds = [[linea.bounds[1], linea.bounds[0]], [linea.bounds[3], linea.bounds[2]]]
             m = folium.Map()
@@ -172,8 +158,6 @@ def mostrar_isv():
 
                 coords = list(seg.coords)
                 if len(coords) >= 2:
-                    
-
                     dx = coords[1][0] - coords[0][0]
                     dy = coords[1][1] - coords[0][1]
                     label_x = coords[0][0] + dx * 0.03
