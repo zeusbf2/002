@@ -1,6 +1,7 @@
 import streamlit as st
 import zipfile
 import os
+import shutil
 import pandas as pd
 import math
 import folium
@@ -9,18 +10,17 @@ from xml.etree import ElementTree as ET
 from geopy.distance import geodesic
 from streamlit_folium import st_folium
 
-# === RUTAS ROBUSTAS ===
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 RAIZ_PROYECTO = os.path.abspath(os.path.join(BASE_DIR, ".."))
-
 archivo_excel = os.path.join(RAIZ_PROYECTO, "INDICES CACC_IMN.xlsx")
 hoja = "Indices Mejorados Normalizados"
 carpeta_kmz = os.path.join(RAIZ_PROYECTO, "tus_kmz")
+carpeta_salida = os.path.join(RAIZ_PROYECTO, "kmz_pintados")
+os.makedirs(carpeta_salida, exist_ok=True)
 
 def mostrar_todas_rutas_isv():
     st.markdown("<h1 style='font-size: 30px;'>🗺️ Mapa ISV Global Mejorado</h1>", unsafe_allow_html=True)
 
-    # Validaciones
     if not os.path.exists(archivo_excel):
         st.error(f"No se encontró el archivo Excel: {archivo_excel}")
         return
@@ -30,12 +30,11 @@ def mostrar_todas_rutas_isv():
 
     kmz_files = [f for f in os.listdir(carpeta_kmz) if f.endswith(".kmz")]
     rutas_disponibles = sorted(set(os.path.splitext(f)[0].split("_")[-1] for f in kmz_files))
-
     if not rutas_disponibles:
         st.warning("No se encontraron archivos KMZ en la carpeta.")
         return
 
-    # === FUNCIONES INTERNAS ===
+    ejecutar = st.button("🖍️ Pintar y exportar KMZs")
 
     df_excel = pd.read_excel(archivo_excel, sheet_name=hoja, header=None, engine='openpyxl')
 
@@ -107,52 +106,63 @@ def mostrar_todas_rutas_isv():
             segmentos.append(LineString(segmento))
         return segmentos
 
-    # === MAPA Y VISUALIZACIÓN ===
+    if ejecutar:
+        progreso = st.progress(0, text="Procesando rutas...")
 
-    m = folium.Map()
-    folium.TileLayer(
-        tiles="https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-        attr="Google Hybrid",
-        name="Satélite + Nombres",
-        max_zoom=20,
-        subdomains=["mt0", "mt1", "mt2", "mt3"]
-    ).add_to(m)
-    folium.TileLayer("OpenStreetMap", name="Mapa base").add_to(m)
+        for idx, ruta_sufijo in enumerate(rutas_disponibles):
+            progreso.progress((idx + 1) / len(rutas_disponibles), text=f"Procesando {ruta_sufijo}...")
 
-    progreso = st.progress(0, text="Procesando rutas...")
+            valores = cargar_valores_excel(ruta_sufijo, df_excel)
+            kmz_filename = next((f for f in kmz_files if f.endswith(f"{ruta_sufijo}.kmz")), None)
+            if not kmz_filename:
+                continue
 
-    for idx, ruta_sufijo in enumerate(rutas_disponibles):
-        progreso.progress((idx + 1) / len(rutas_disponibles), text=f"Procesando {ruta_sufijo}...")
+            try:
+                kmz_path = os.path.join(carpeta_kmz, kmz_filename)
+                linea = cargar_linea_desde_kmz(kmz_path)
+                segmentos = dividir_linea_por_km_real(linea)
 
-        valores = cargar_valores_excel(ruta_sufijo, df_excel)
-        kmz_filename = next((f for f in kmz_files if f.endswith(f"{ruta_sufijo}.kmz")), None)
-        if not kmz_filename:
-            continue
+                # Crear un nuevo archivo KML
+                kml_output = ET.Element("kml", xmlns="http://www.opengis.net/kml/2.2")
+                doc = ET.SubElement(kml_output, "Document")
 
-        try:
-            kmz_path = os.path.join(carpeta_kmz, kmz_filename)
-            linea = cargar_linea_desde_kmz(kmz_path)
-            segmentos = dividir_linea_por_km_real(linea)
+                for i, seg in enumerate(segmentos):
+                    color = valor_a_color(valores[i]) if valores and i < len(valores) else "#FFFFFF"
+                    placemark = ET.SubElement(doc, "Placemark")
+                    ET.SubElement(placemark, "name").text = f"Tramo {i+1}"
+                    style = ET.SubElement(placemark, "Style")
+                    line_style = ET.SubElement(style, "LineStyle")
+                    ET.SubElement(line_style, "color").text = kml_color(color)
+                    ET.SubElement(line_style, "width").text = "4"
 
-            for i, seg in enumerate(segmentos):
-                color = valor_a_color(valores[i]) if valores and i < len(valores) else "#FFFFFF"
-                folium.GeoJson(mapping(seg), style_function=(lambda col=color: lambda x: {"color": col, "weight": 5})(color)).add_to(m)
+                    linestring = ET.SubElement(placemark, "LineString")
+                    ET.SubElement(linestring, "tessellate").text = "1"
+                    coords = " ".join([f"{x[0]},{x[1]},0" for x in seg.coords])
+                    ET.SubElement(linestring, "coordinates").text = coords
 
-        except Exception as e:
-            st.error(f"❌ Error al procesar la ruta {ruta_sufijo}: {e}")
+                # Guardar como KML
+                nombre_base = os.path.splitext(kmz_filename)[0]
+                kml_path = os.path.join(carpeta_salida, f"{nombre_base}.kml")
+                tree = ET.ElementTree(kml_output)
+                tree.write(kml_path, encoding="utf-8", xml_declaration=True)
 
-    folium.LayerControl().add_to(m)
+                # Crear el nuevo KMZ
+                kmz_out = os.path.join(carpeta_salida, f"{nombre_base}_pintado.kmz")
+                with zipfile.ZipFile(kmz_out, 'w', zipfile.ZIP_DEFLATED) as zf:
+                    zf.write(kml_path, arcname="doc.kml")
+                os.remove(kml_path)  # limpiar kml temporal
 
-    st.markdown("### 🗺️ Leyenda")
-    st.markdown("""
-    <div style='line-height: 2'>
-    <span style='background-color:#00FF00;padding:5px 10px;margin-right:5px;'></span> CAT 1 - Muy baja (≤ 1.00)<br>
-    <span style='background-color:#FFFF00;padding:5px 10px;margin-right:5px;'></span> CAT 2 - Baja (≤ 2.00)<br>
-    <span style='background-color:#FFA500;padding:5px 10px;margin-right:5px;'></span> CAT 3 - Media (≤ 3.00)<br>
-    <span style='background-color:#FF0000;padding:5px 10px;margin-right:5px;'></span> CAT 4 - Alta (≤ 4.00)<br>
-    <span style='background-color:#808080;padding:5px 10px;margin-right:5px;'></span> CAT 5 - Muy alta (≤ 5.00)<br>
-    <span style='background-color:#FFFFFF;padding:5px 10px;margin-right:5px;border:1px solid #ccc;'></span> Sin datos
-    </div>
-    """, unsafe_allow_html=True)
+            except Exception as e:
+                st.error(f"❌ Error al procesar la ruta {ruta_sufijo}: {e}")
 
-    st_folium(m, use_container_width=True, height=650)
+        st.success("✅ ¡Todos los archivos KMZ pintados fueron generados exitosamente!")
+
+def kml_color(html_color):
+    """Convierte un color HTML (#RRGGBB) a formato KML (aabbggrr) con alfa completa."""
+    html_color = html_color.lstrip('#')
+    if len(html_color) != 6:
+        return "ff000000"
+    r = html_color[0:2]
+    g = html_color[2:4]
+    b = html_color[4:6]
+    return f"ff{b}{g}{r}"
