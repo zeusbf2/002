@@ -38,12 +38,15 @@ def mostrar_todas_rutas_isv():
     if not os.path.exists(archivo_excel):
         st.error(f"No se encontró el archivo Excel: {archivo_excel}")
         return
+    else:
+        st.info(f"📄 Usando archivo Excel: `{archivo_excel}`")
+
     if not os.path.exists(carpeta_kmz):
         st.error(f"No se encontró la carpeta de archivos KMZ: {carpeta_kmz}")
         return
 
     kmz_files = [f for f in os.listdir(carpeta_kmz) if f.endswith(".kmz")]
-    rutas_disponibles = sorted(set(os.path.splitext(f)[0].split("_")[-1] for f in kmz_files))
+    rutas_disponibles = sorted(os.path.splitext(f)[0] for f in kmz_files)
     if not rutas_disponibles:
         st.warning("No se encontraron archivos KMZ en la carpeta.")
         return
@@ -123,16 +126,20 @@ def mostrar_todas_rutas_isv():
     if ejecutar:
         progreso = st.progress(0, text="Procesando rutas...")
 
-        for idx, ruta_sufijo in enumerate(rutas_disponibles):
-            progreso.progress((idx + 1) / len(rutas_disponibles), text=f"Procesando {ruta_sufijo}...")
+        for idx, ruta_nombre in enumerate(rutas_disponibles):
+            progreso.progress((idx + 1) / len(rutas_disponibles), text=f"Procesando {ruta_nombre}...")
 
-            valores = cargar_valores_excel(ruta_sufijo, df_excel)
-            kmz_filename = next((f for f in kmz_files if f.endswith(f"{ruta_sufijo}.kmz")), None)
-            if not kmz_filename:
+            valores = cargar_valores_excel(ruta_nombre, df_excel)
+            kmz_filename = ruta_nombre + ".kmz"
+            kmz_path = os.path.join(carpeta_kmz, kmz_filename)
+
+            if not os.path.exists(kmz_path):
+                st.warning(f"⚠️ No se encontró el archivo KMZ: {kmz_path}")
                 continue
 
+            st.write(f"📂 Procesando archivo KMZ: `{kmz_path}`")
+
             try:
-                kmz_path = os.path.join(carpeta_kmz, kmz_filename)
                 linea = cargar_linea_desde_kmz(kmz_path)
                 segmentos = dividir_linea_por_km_real(linea)
 
@@ -153,22 +160,21 @@ def mostrar_todas_rutas_isv():
                     coords = " ".join([f"{x[0]},{x[1]},0" for x in seg.coords])
                     ET.SubElement(linestring, "coordinates").text = coords
 
-                nombre_base = os.path.splitext(kmz_filename)[0]
-                kml_path = os.path.join(carpeta_salida, f"{nombre_base}.kml")
+                kml_path = os.path.join(carpeta_salida, f"{ruta_nombre}.kml")
                 tree = ET.ElementTree(kml_output)
                 tree.write(kml_path, encoding="utf-8", xml_declaration=True)
 
-                kmz_out = os.path.join(carpeta_salida, f"{nombre_base}_pintado.kmz")
+                kmz_out = os.path.join(carpeta_salida, f"{ruta_nombre}_pintado.kmz")
                 with zipfile.ZipFile(kmz_out, 'w', zipfile.ZIP_DEFLATED) as zf:
                     zf.write(kml_path, arcname="doc.kml")
                 os.remove(kml_path)
 
             except Exception as e:
-                st.error(f"❌ Error al procesar la ruta {ruta_sufijo}: {e}")
+                st.error(f"❌ Error al procesar {ruta_nombre}: {repr(e)}")
 
         st.success("✅ ¡Todos los archivos KMZ pintados fueron generados exitosamente!")
 
-        # VISUALIZACIÓN DE LOS KMZ GENERADOS
+        # VISUALIZACIÓN
         st.markdown("### 🗺️ Visualización de KMZs pintados")
         m = folium.Map()
         folium.TileLayer("OpenStreetMap").add_to(m)
