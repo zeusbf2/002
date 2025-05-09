@@ -1,9 +1,9 @@
 import streamlit as st
 import zipfile
 import os
+import pandas as pd
 import math
 import folium
-import pandas as pd
 from shapely.geometry import LineString, mapping
 from xml.etree import ElementTree as ET
 from geopy.distance import geodesic
@@ -13,14 +13,14 @@ from streamlit_folium import st_folium
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 RAIZ_PROYECTO = os.path.abspath(os.path.join(BASE_DIR, ".."))
 
-carpeta_kmz = os.path.join(RAIZ_PROYECTO, "tus_kmz")
 archivo_excel = os.path.join(RAIZ_PROYECTO, "INDICES CACC_IMN.xlsx")
 hoja = "Indices Mejorados Normalizados"
+carpeta_kmz = os.path.join(RAIZ_PROYECTO, "tus_kmz")
 
-def mostrar_isv():
-    st.markdown("<h1 style='font-size: 30px;'>🗺️ Mapa ISV Mejorado</h1>", unsafe_allow_html=True)
+def mostrar_todas_rutas_isv():
+    st.markdown("<h1 style='font-size: 30px;'>🗺️ Mapa ISV Global Mejorado</h1>", unsafe_allow_html=True)
 
-    # Validaciones previas
+    # Validaciones
     if not os.path.exists(archivo_excel):
         st.error(f"No se encontró el archivo Excel: {archivo_excel}")
         return
@@ -29,16 +29,17 @@ def mostrar_isv():
         return
 
     kmz_files = [f for f in os.listdir(carpeta_kmz) if f.endswith(".kmz")]
-    if not kmz_files:
-        st.warning("No se encontraron archivos KMZ.")
+    rutas_disponibles = sorted(set(os.path.splitext(f)[0].split("_")[-1] for f in kmz_files))
+
+    if not rutas_disponibles:
+        st.warning("No se encontraron archivos KMZ en la carpeta.")
         return
 
-    rutas_disponibles = sorted(set(os.path.splitext(f)[0].split("_")[-1] for f in kmz_files))
-    ruta_seleccionada = st.selectbox("Selecciona una ruta:", rutas_disponibles)
-
     # === FUNCIONES INTERNAS ===
-    def cargar_valores_excel(nombre_ruta):
-        df = pd.read_excel(archivo_excel, sheet_name=hoja, header=None, engine='openpyxl')
+
+    df_excel = pd.read_excel(archivo_excel, sheet_name=hoja, header=None, engine='openpyxl')
+
+    def cargar_valores_excel(nombre_ruta, df):
         fila_nombres = df.iloc[3, 2:].astype(str).str.strip()
         coincidencias = fila_nombres[fila_nombres == nombre_ruta]
         if coincidencias.empty:
@@ -48,8 +49,7 @@ def mostrar_isv():
         valores = []
         for v in columna:
             try:
-                num = float(v)
-                valores.append(num)
+                valores.append(float(v))
             except:
                 valores.append(None)
         return valores
@@ -107,99 +107,52 @@ def mostrar_isv():
             segmentos.append(LineString(segmento))
         return segmentos
 
-    def longitud_geodesica_total(linea):
-        coords = list(linea.coords)
-        total = 0
-        for i in range(1, len(coords)):
-            p1 = (coords[i - 1][1], coords[i - 1][0])
-            p2 = (coords[i][1], coords[i][0])
-            total += geodesic(p1, p2).meters
-        return total / 1000  # km
+    # === MAPA Y VISUALIZACIÓN ===
 
-    if ruta_seleccionada:
-        valores = cargar_valores_excel(ruta_seleccionada)
-        if valores is None:
-            st.warning("No se encontraron datos para esta ruta en el Excel.")
-            return
+    m = folium.Map()
+    folium.TileLayer(
+        tiles="https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+        attr="Google Hybrid",
+        name="Satélite + Nombres",
+        max_zoom=20,
+        subdomains=["mt0", "mt1", "mt2", "mt3"]
+    ).add_to(m)
+    folium.TileLayer("OpenStreetMap", name="Mapa base").add_to(m)
 
-        kmz_filename = next((f for f in kmz_files if f.endswith(f"{ruta_seleccionada}.kmz")), None)
+    progreso = st.progress(0, text="Procesando rutas...")
+
+    for idx, ruta_sufijo in enumerate(rutas_disponibles):
+        progreso.progress((idx + 1) / len(rutas_disponibles), text=f"Procesando {ruta_sufijo}...")
+
+        valores = cargar_valores_excel(ruta_sufijo, df_excel)
+        kmz_filename = next((f for f in kmz_files if f.endswith(f"{ruta_sufijo}.kmz")), None)
         if not kmz_filename:
-            st.error("No se encontró el archivo KMZ para esta ruta.")
-            return
-
-        ruta_kmz = os.path.join(carpeta_kmz, kmz_filename)
+            continue
 
         try:
-            linea = cargar_linea_desde_kmz(ruta_kmz)
-            long_km = longitud_geodesica_total(linea)
-            st.info(f"📏 Longitud total del KMZ: {long_km:.2f} km")
-
+            kmz_path = os.path.join(carpeta_kmz, kmz_filename)
+            linea = cargar_linea_desde_kmz(kmz_path)
             segmentos = dividir_linea_por_km_real(linea)
 
-            if len(valores) < len(segmentos):
-                st.warning(f"La ruta tiene {len(segmentos)} tramos, pero el Excel solo tiene {len(valores)} valores. El resto será blanco.")
-
-            bounds = [[linea.bounds[1], linea.bounds[0]], [linea.bounds[3], linea.bounds[2]]]
-            m = folium.Map()
-            folium.TileLayer(
-                tiles="https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-                attr="Google Hybrid",
-                name="Satélite + Nombres",
-                max_zoom=20,
-                subdomains=["mt0", "mt1", "mt2", "mt3"]
-            ).add_to(m)
-            folium.TileLayer("OpenStreetMap", name="Mapa base").add_to(m)
-            m.fit_bounds(bounds)
-
             for i, seg in enumerate(segmentos):
-                color = valor_a_color(valores[i]) if i < len(valores) else "#FFFFFF"
-                folium.GeoJson(mapping(seg), style_function=lambda x: {"color": "black", "weight": 9}).add_to(m)
+                color = valor_a_color(valores[i]) if valores and i < len(valores) else "#FFFFFF"
                 folium.GeoJson(mapping(seg), style_function=(lambda col=color: lambda x: {"color": col, "weight": 5})(color)).add_to(m)
 
-                coords = list(seg.coords)
-                if len(coords) >= 2:
-                    dx = coords[1][0] - coords[0][0]
-                    dy = coords[1][1] - coords[0][1]
-                    label_x = coords[0][0] + dx * 0.03
-                    label_y = coords[0][1] + dy * 0.03 - 0.0020
-
-                    icon_html = f"""
-                    <div style="
-                        background-color: {color};
-                        color: black;
-                        border-radius: 50%;
-                        width: 32px;
-                        height: 32px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        font-weight: bold;
-                        font-size: 13px;
-                        border: 2px solid #00000088;
-                        box-shadow: 1px 1px 6px rgba(0,0,0,0.5);
-                    ">
-                        {i+1}
-                    </div>
-                    """
-                    folium.Marker(location=[label_y, label_x], icon=folium.DivIcon(html=icon_html)).add_to(m)
-
-            folium.LayerControl().add_to(m)
-
-            col1, col2 = st.columns([1, 4])
-            with col1:
-                st.markdown("### 🗺️ Leyenda")
-                st.markdown("""
-                <div style='line-height: 2'>
-                <span style='background-color:#00FF00;padding:5px 10px;margin-right:5px;'></span> CAT 1 - Muy baja (≤ 1.00)<br>
-                <span style='background-color:#FFFF00;padding:5px 10px;margin-right:5px;'></span> CAT 2 - Baja (≤ 2.00)<br>
-                <span style='background-color:#FFA500;padding:5px 10px;margin-right:5px;'></span> CAT 3 - Media (≤ 3.00)<br>
-                <span style='background-color:#FF0000;padding:5px 10px;margin-right:5px;'></span> CAT 4 - Alta (≤ 4.00)<br>
-                <span style='background-color:#808080;padding:5px 10px;margin-right:5px;'></span> CAT 5 - Muy alta (≤ 5.00)<br>
-                <span style='background-color:#FFFFFF;padding:5px 10px;margin-right:5px;border:1px solid #ccc;'></span> Sin datos
-                </div>
-                """, unsafe_allow_html=True)
-            with col2:
-                st_folium(m, use_container_width=True, height=650)
-
         except Exception as e:
-            st.error(f"Error al procesar la ruta: {e}")
+            st.error(f"❌ Error al procesar la ruta {ruta_sufijo}: {e}")
+
+    folium.LayerControl().add_to(m)
+
+    st.markdown("### 🗺️ Leyenda")
+    st.markdown("""
+    <div style='line-height: 2'>
+    <span style='background-color:#00FF00;padding:5px 10px;margin-right:5px;'></span> CAT 1 - Muy baja (≤ 1.00)<br>
+    <span style='background-color:#FFFF00;padding:5px 10px;margin-right:5px;'></span> CAT 2 - Baja (≤ 2.00)<br>
+    <span style='background-color:#FFA500;padding:5px 10px;margin-right:5px;'></span> CAT 3 - Media (≤ 3.00)<br>
+    <span style='background-color:#FF0000;padding:5px 10px;margin-right:5px;'></span> CAT 4 - Alta (≤ 4.00)<br>
+    <span style='background-color:#808080;padding:5px 10px;margin-right:5px;'></span> CAT 5 - Muy alta (≤ 5.00)<br>
+    <span style='background-color:#FFFFFF;padding:5px 10px;margin-right:5px;border:1px solid #ccc;'></span> Sin datos
+    </div>
+    """, unsafe_allow_html=True)
+
+    st_folium(m, use_container_width=True, height=650)
