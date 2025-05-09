@@ -16,10 +16,14 @@ archivo_excel = os.path.join(RAIZ_PROYECTO, "INDICES CACC_IMN.xlsx")
 hoja = "Indices Mejorados Normalizados"
 carpeta_kmz = os.path.join(RAIZ_PROYECTO, "tus_kmz")
 carpeta_salida = os.path.join(RAIZ_PROYECTO, "kmz_pintados")
+
+# Crear carpeta de salida y .gitkeep si está vacía
 os.makedirs(carpeta_salida, exist_ok=True)
+if not os.listdir(carpeta_salida):
+    with open(os.path.join(carpeta_salida, ".gitkeep"), "w") as f:
+        f.write("")
 
 def kml_color(html_color):
-    """Convierte un color HTML (#RRGGBB) a formato KML (aabbggrr) con alfa completa."""
     html_color = html_color.lstrip('#')
     if len(html_color) != 6:
         return "ff000000"
@@ -164,7 +168,7 @@ def mostrar_todas_rutas_isv():
 
         st.success("✅ ¡Todos los archivos KMZ pintados fueron generados exitosamente!")
 
-        # VISOR FINAL DE KMZ GENERADOS
+        # VISUALIZACIÓN DE LOS KMZ GENERADOS
         st.markdown("### 🗺️ Visualización de KMZs pintados")
         m = folium.Map()
         folium.TileLayer("OpenStreetMap").add_to(m)
