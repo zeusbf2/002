@@ -3,7 +3,6 @@ import zipfile
 import os
 import shutil
 import pandas as pd
-import math
 import folium
 from shapely.geometry import LineString, mapping
 from xml.etree import ElementTree as ET
@@ -17,7 +16,7 @@ hoja = "Indices Mejorados Normalizados"
 carpeta_kmz = os.path.join(RAIZ_PROYECTO, "tus_kmz")
 carpeta_salida = os.path.join(RAIZ_PROYECTO, "kmz_pintados")
 
-# Crear carpeta de salida y .gitkeep si está vacía
+# Crear carpeta y .gitkeep si vacía
 os.makedirs(carpeta_salida, exist_ok=True)
 if not os.listdir(carpeta_salida):
     with open(os.path.join(carpeta_salida, ".gitkeep"), "w") as f:
@@ -169,10 +168,12 @@ def mostrar_todas_rutas_isv():
                     zf.write(kml_path, arcname="doc.kml")
                 os.remove(kml_path)
 
+                st.success(f"✅ KMZ generado: `{kmz_out}`")
+
             except Exception as e:
                 st.error(f"❌ Error al procesar {ruta_nombre}: {repr(e)}")
 
-        st.success("✅ ¡Todos los archivos KMZ pintados fueron generados exitosamente!")
+        st.success("🎉 ¡Todos los archivos KMZ pintados fueron generados!")
 
         # VISUALIZACIÓN
         st.markdown("### 🗺️ Visualización de KMZs pintados")
