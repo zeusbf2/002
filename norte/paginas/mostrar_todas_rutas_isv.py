@@ -18,8 +18,18 @@ carpeta_kmz = os.path.join(RAIZ_PROYECTO, "tus_kmz")
 carpeta_salida = os.path.join(RAIZ_PROYECTO, "kmz_pintados")
 os.makedirs(carpeta_salida, exist_ok=True)
 
+def kml_color(html_color):
+    """Convierte un color HTML (#RRGGBB) a formato KML (aabbggrr) con alfa completa."""
+    html_color = html_color.lstrip('#')
+    if len(html_color) != 6:
+        return "ff000000"
+    r = html_color[0:2]
+    g = html_color[2:4]
+    b = html_color[4:6]
+    return f"ff{b}{g}{r}"
+
 def mostrar_todas_rutas_isv():
-    st.markdown("<h1 style='font-size: 30px;'>🗺️ Mapa ISV Global Mejorado</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='font-size: 30px;'>🖍️ Pintar y Exportar KMZs con ISV</h1>", unsafe_allow_html=True)
 
     if not os.path.exists(archivo_excel):
         st.error(f"No se encontró el archivo Excel: {archivo_excel}")
@@ -122,7 +132,6 @@ def mostrar_todas_rutas_isv():
                 linea = cargar_linea_desde_kmz(kmz_path)
                 segmentos = dividir_linea_por_km_real(linea)
 
-                # Crear un nuevo archivo KML
                 kml_output = ET.Element("kml", xmlns="http://www.opengis.net/kml/2.2")
                 doc = ET.SubElement(kml_output, "Document")
 
@@ -140,29 +149,48 @@ def mostrar_todas_rutas_isv():
                     coords = " ".join([f"{x[0]},{x[1]},0" for x in seg.coords])
                     ET.SubElement(linestring, "coordinates").text = coords
 
-                # Guardar como KML
                 nombre_base = os.path.splitext(kmz_filename)[0]
                 kml_path = os.path.join(carpeta_salida, f"{nombre_base}.kml")
                 tree = ET.ElementTree(kml_output)
                 tree.write(kml_path, encoding="utf-8", xml_declaration=True)
 
-                # Crear el nuevo KMZ
                 kmz_out = os.path.join(carpeta_salida, f"{nombre_base}_pintado.kmz")
                 with zipfile.ZipFile(kmz_out, 'w', zipfile.ZIP_DEFLATED) as zf:
                     zf.write(kml_path, arcname="doc.kml")
-                os.remove(kml_path)  # limpiar kml temporal
+                os.remove(kml_path)
 
             except Exception as e:
                 st.error(f"❌ Error al procesar la ruta {ruta_sufijo}: {e}")
 
         st.success("✅ ¡Todos los archivos KMZ pintados fueron generados exitosamente!")
 
-def kml_color(html_color):
-    """Convierte un color HTML (#RRGGBB) a formato KML (aabbggrr) con alfa completa."""
-    html_color = html_color.lstrip('#')
-    if len(html_color) != 6:
-        return "ff000000"
-    r = html_color[0:2]
-    g = html_color[2:4]
-    b = html_color[4:6]
-    return f"ff{b}{g}{r}"
+        # VISOR FINAL DE KMZ GENERADOS
+        st.markdown("### 🗺️ Visualización de KMZs pintados")
+        m = folium.Map()
+        folium.TileLayer("OpenStreetMap").add_to(m)
+
+        for archivo in os.listdir(carpeta_salida):
+            if archivo.endswith("_pintado.kmz"):
+                try:
+                    with zipfile.ZipFile(os.path.join(carpeta_salida, archivo), 'r') as z:
+                        kml_file = next(f for f in z.namelist() if f.endswith('.kml'))
+                        with z.open(kml_file) as kml_data:
+                            tree = ET.parse(kml_data)
+                            ns = {'kml': 'http://www.opengis.net/kml/2.2'}
+                            for placemark in tree.findall(".//kml:Placemark", ns):
+                                coords_node = placemark.find('.//kml:coordinates', ns)
+                                if coords_node is None:
+                                    continue
+                                coords_text = coords_node.text.strip()
+                                coord_pairs = []
+                                for line in coords_text.split():
+                                    parts = line.split(",")
+                                    if len(parts) >= 2:
+                                        lon, lat = float(parts[0]), float(parts[1])
+                                        coord_pairs.append((lat, lon))
+                                if coord_pairs:
+                                    folium.PolyLine(coord_pairs, color="blue", weight=3).add_to(m)
+                except:
+                    continue
+
+        st_folium(m, use_container_width=True, height=600)
