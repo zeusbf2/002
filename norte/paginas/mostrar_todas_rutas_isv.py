@@ -20,6 +20,7 @@ hoja = "Indices Mejorados Normalizados"
 def mostrar_isv():
     st.markdown("<h1 style='font-size: 30px;'>🗺️ Mapa ISV Mejorado</h1>", unsafe_allow_html=True)
 
+    # Validaciones previas
     if not os.path.exists(archivo_excel):
         st.error(f"No se encontró el archivo Excel: {archivo_excel}")
         return
@@ -35,13 +36,7 @@ def mostrar_isv():
     rutas_disponibles = sorted(set(os.path.splitext(f)[0].split("_")[-1] for f in kmz_files))
     ruta_seleccionada = st.selectbox("Selecciona una ruta:", rutas_disponibles)
 
-    if st.button("🔄 Generar mapa"):
-        mostrar_mapa = True
-    else:
-        mostrar_mapa = False
-
     # === FUNCIONES INTERNAS ===
-    @st.cache_data
     def cargar_valores_excel(nombre_ruta):
         df = pd.read_excel(archivo_excel, sheet_name=hoja, header=None, engine='openpyxl')
         fila_nombres = df.iloc[3, 2:].astype(str).str.strip()
@@ -77,7 +72,6 @@ def mostrar_isv():
         else:
             return "#FFFFFF"
 
-    @st.cache_data
     def cargar_linea_desde_kmz(kmz_path):
         with zipfile.ZipFile(kmz_path, 'r') as z:
             kml_file = next(f for f in z.namelist() if f.endswith('.kml'))
@@ -122,8 +116,7 @@ def mostrar_isv():
             total += geodesic(p1, p2).meters
         return total / 1000  # km
 
-    # === SOLO SI EL USUARIO GENERA EL MAPA ===
-    if mostrar_mapa and ruta_seleccionada:
+    if ruta_seleccionada:
         valores = cargar_valores_excel(ruta_seleccionada)
         if valores is None:
             st.warning("No se encontraron datos para esta ruta en el Excel.")
